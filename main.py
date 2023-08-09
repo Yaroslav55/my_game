@@ -1,4 +1,4 @@
-# Импортируем все необходимые библиотеки:
+# Yaroslav 2023
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
