@@ -4,12 +4,11 @@ from OpenGL.GLUT import *
 import time
 from typing import Union
 
-
 from camera import Camera
-
+import const_variables_store as const_var
 
 class Vector3f:
-    def __init__(self, x: float, y: float, z: float):
+    def __init__(self, x: float = 0, y: float = 0, z: float = 0):
         self.x = x
         self.y = y
         self.z = z
@@ -22,18 +21,58 @@ class Vector3f:
     def set_zero(self):
         self.set_variables(0.0, 0.0, 0.0)
 
+    def set(self, coord: list[list[int]]):
+        self.x = coord[0]
+        self.y = coord[1]
+        self.z = coord[2]
+
+    def set(self, coord: None):
+        self.x = coord.x
+        self.y = coord.y
+        self.z = coord.z
+
+    def __setitem__(self, index, value):
+        if index == 0:
+            self.x = value
+        elif index == 1:
+            self.y = value
+        elif index == 2:
+            self.z = value
+        else:
+            print("Error Vector3F incorrect index: ", index)
+    def __getitem__(self, index):
+        if index == 0:
+            return self.x
+        elif index == 1:
+            return self.y
+        elif index == 2:
+            return self.z
+        else:
+            print("Error Vector3F incorrect index: ", index)
+    def __add__ (self, value ):
+        self.x += value.x
+        self.y += value.y
+        self.z += value.z
+        return self
+
 
 class Render(object):
     _GAME_TIMER = 15  # Related to game FPS
     GAME_MODE = "3D"
-    vertex_array = [[0] * 3 for i in range(5 * 5)]
+    MAX_VERTEX_COUNT = 300 * 300
+
+    vertex_array = [Vector3f(0, 0, 0) for i in range(MAX_VERTEX_COUNT)]
     index_array = []
+
+    lines_aray = [ Vector3f(0, 0, 0) for i in range(300)]
 
     def __init__(self, camera_obj: Camera, upd_func):
         self._camera_obj = camera_obj
         self._update_func = upd_func
+
     def run(self):
         self._opengl_init()
+
     def _opengl_init(self):
         glutInit(sys.argv)
         glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB)
@@ -62,7 +101,19 @@ class Render(object):
         glVertex3f(end_pos.x, end_pos.y, end_pos.z)
         glEnd()
 
+    def _draw_lines(self):
+        #       Draw all lines on the scene
+        glBegin(GL_LINES)
+        glColor3d(1, 1, 0)
+        for i in range(300)[::2]:
+            _pos_start = self.lines_aray[i]
+            _pos_end = self.lines_aray[i + 1]
+            glVertex3d(_pos_start.x, _pos_start.y, _pos_start.z)
+            glVertex3d(_pos_end.x, _pos_end.y, _pos_end.z)
+        glEnd()
+
     def _draw_terrain(self, line_mode: bool = 0):
+
         #       Draw game terrain
         if line_mode:
             glLineWidth(1)
@@ -80,7 +131,7 @@ class Render(object):
                 glVertex3d(x, y, z)
             except IndexError:
                 print("Error: Triangle index dont have a vertex pair: index ", i - 1)
-        glEnd();
+        glEnd()
         #       -------------
 
     def reshape(self, w, h):
@@ -91,8 +142,7 @@ class Render(object):
         glMatrixMode(GL_MODELVIEW);
 
     def _make_camera(self, pos: Union[Vector3f, list[float]], look: Union[Vector3f, list[float]]):
-        # pos = game_camera.get_postion()
-        # look = game_camera.get_point_of_view()
+
         if self.GAME_MODE == "3D":
             gluLookAt(pos[0], pos[1], pos[2], look[0], look[1], look[2], 0.0, 1.0, 0.0)
         elif self.GAME_MODE == "2D":
@@ -107,10 +157,10 @@ class Render(object):
         self._make_camera(self._camera_obj.get_postion(), self._camera_obj.get_point_of_view())
         glScalef(1.0, 2.0, 1.0);
 
-        # game_scene.draw_grid()
-        self._draw_terrain(1)
-        # glColor3f(1.0, 1.0, 1.0)
-        # glutWireCube(1.0)
+        self._draw_lines()
+
+        self._draw_terrain(const_var.TERRAIN_MODE)
+
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         glColor3f(1.0, 0.0, 1.0)
         glutSolidCube(0.05)
@@ -134,10 +184,10 @@ class Render(object):
         elif key == GLUT_KEY_PAGE_UP:  # Клавиша вниз
             cam_angel_h += rotate_angle
         elif key == GLUT_KEY_HOME:  # Клавиша вниз Y
-            self._camera_obj.move_up(cam_angel)
+            self._camera_obj.move_up()
         elif key == GLUT_KEY_END:
-            self._camera_obj.move_down(cam_angel)
+            self._camera_obj.move_down()
         elif key == GLUT_KEY_PAGE_DOWN:  # Клавиша вниз
-            cam_angel -= rotate_angle  # math.cos(cam_angel * math.pi / 180) * CAMERA_SPEED
+            cam_angel_h -= rotate_angle  # math.cos(cam_angel * math.pi / 180) * CAMERA_SPEED
         self._camera_obj.rotate(cam_angel, cam_angel_h)
         # glutPostRedisplay()
