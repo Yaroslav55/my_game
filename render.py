@@ -65,7 +65,7 @@ class Render(object):
     index_array = []
 
     lines_aray = [ Vector3f(0, 0, 0) for i in range(300)]
-
+    chunks = []
     def __init__(self, camera_obj: Camera, upd_func):
         self._camera_obj = camera_obj
         self._update_func = upd_func
@@ -121,17 +121,23 @@ class Render(object):
         else:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
-        glBegin(GL_TRIANGLE_STRIP)
-        glColor3d(0, 1, 0)
-        for i in self.index_array:
-            try:
-                x = self.vertex_array[i - 1][0]
-                y = self.vertex_array[i - 1][1]
-                z = self.vertex_array[i - 1][2]
-                glVertex3d(x, y, z)
-            except IndexError:
-                print("Error: Triangle index dont have a vertex pair: index ", i - 1)
-        glEnd()
+        for index, chunk in enumerate(self.chunks):
+            if index == 0:
+                start_index = 0
+            else:
+                start_index = self.chunks[ index - 1] * 2 -1
+            last_index = start_index + chunk * 2 - 1
+            glBegin(GL_TRIANGLE_STRIP)
+            glColor3d(chunk, 1, 0)
+            for i in self.index_array[start_index:last_index]:
+                try:
+                    x = self.vertex_array[i - 1][0]
+                    y = self.vertex_array[i - 1][1]
+                    z = self.vertex_array[i - 1][2]
+                    glVertex3d(x, y, z)
+                except IndexError:
+                    print("Error: Triangle index dont have a vertex pair: index ", i - 1)
+            glEnd()
         #       -------------
 
     def reshape(self, w, h):

@@ -19,7 +19,8 @@ def update():
 def game_init():
 
 
-    game_scene.draw_terrain(45, 45)
+    game_scene.draw_terrain(4, 4)
+    game_scene.draw_terrain(5, 5)
     #game_scene.draw_grid(0.5)
 
 if __name__ == "__main__":
