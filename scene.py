@@ -4,6 +4,12 @@ from render import Render, Vector3f
 import const_variables_store as const_var
 
 
+class GameChunk(object):
+    def __init__(self, cent_pos: Vector3f, chunk_size):
+        self.chunk_center: Vector3f = cent_pos
+        self.chunk_size = chunk_size
+
+
 class Scene(object):
 
     def __init__(self, render_Obj: Render):
@@ -48,25 +54,25 @@ class Scene(object):
         #     [3, 4, 0], [4, 4, 0], [5, 4, 0], [6, 4, 0], [7, 4, 0],
         #     [3, 3, 0], [4, 3, 0], [5, 3, 0], [6, 3, 0], [7, 3, 0]
         # ]
-        offset_vector = Vector3f(-hight / 2, 0, -width / 2)
+        #offset_vector = Vector3f(-hight / 2, 0, -width / 2)     # Chunk offset
+        offset_vector = Vector3f(0, 0, 0)     # Chunk offset
         row = 0
         terrain_unit = const_var.TERRAIN_UNIT
-        start_vertex_pos = 0
-        start_index_pos = 0
-        if len(self._render.chunks):
+        count_of_indx_for_chunk = hight * width - (hight - 1)
+        if len(self._render.chunks) == 0:
+            start_vertex_pos = 0
+            start_index_pos = 0
+        else:
             start_vertex_pos = len(self._render.chunks) * self._render.chunks[0]
-            offset_vector.y += 5
+            offset_vector.y += 3
             start_index_pos = start_vertex_pos * 2
-        # hight = int(hight // terrain_unit)
-        # width = int(hight // terrain_unit)
         for i in range(hight):
             for j in range(width):
-                #self._render.vertex_array[j + row].set_variables(terrain_unit * j, 0, terrain_unit * i)
                 self._render.vertex_array[j + row + start_vertex_pos].set_variables(terrain_unit * j, terrain_unit * i, 0)
                 self._render.vertex_array[j + row + start_vertex_pos] += offset_vector
             row += hight
-        for i in range(hight * width - (hight - 1))[1::]:
-            if i == 1 :
+        for i in range(count_of_indx_for_chunk)[1::]:
+            if i == 1:
                 self._render.index_array.append(1 + start_vertex_pos)
             if i % hight == 0:
                 #       Always will be one extra degenerate triangle
@@ -77,7 +83,9 @@ class Scene(object):
             else:
                 self._render.index_array.append(i + width + start_vertex_pos)
                 self._render.index_array.append(i + 1 + start_vertex_pos)
-        self._render.chunks.append( hight * hight )
+        #chunk = GameChunk(offset_vector, hight * width)
+        self._render.chunks.append( hight * width )         # Adding chunk to draw
     def draw_terrain(self, hight, width):
         self._make_terrain(hight, width)
         print("-Info: Terrain was created!")
+
