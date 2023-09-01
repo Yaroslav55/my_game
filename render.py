@@ -5,69 +5,18 @@ import time
 from typing import Union
 
 from camera import Camera
+from scene import Scene, Vector3f
 import const_variables_store as const_var
 
-class Vector3f:
-    def __init__(self, x: float = 0, y: float = 0, z: float = 0):
-        self.x = x
-        self.y = y
-        self.z = z
-
-    def set_variables(self, x: float, y: float, z: float):
-        self.x = x
-        self.y = y
-        self.z = z
-
-    def set_zero(self):
-        self.set_variables(0.0, 0.0, 0.0)
-
-    def set(self, coord: list[list[int]]):
-        self.x = coord[0]
-        self.y = coord[1]
-        self.z = coord[2]
-
-    def set(self, coord: None):
-        self.x = coord.x
-        self.y = coord.y
-        self.z = coord.z
-
-    def __setitem__(self, index, value):
-        if index == 0:
-            self.x = value
-        elif index == 1:
-            self.y = value
-        elif index == 2:
-            self.z = value
-        else:
-            print("Error Vector3F incorrect index: ", index)
-    def __getitem__(self, index):
-        if index == 0:
-            return self.x
-        elif index == 1:
-            return self.y
-        elif index == 2:
-            return self.z
-        else:
-            print("Error Vector3F incorrect index: ", index)
-    def __add__ (self, value ):
-        self.x += value.x
-        self.y += value.y
-        self.z += value.z
-        return self
 
 
 class Render(object):
     _GAME_TIMER = 15  # Related to game FPS
     GAME_MODE = "3D"
-    MAX_VERTEX_COUNT = 300 * 300
 
-    vertex_array = [Vector3f(0, 0, 0) for i in range(MAX_VERTEX_COUNT)]
-    index_array = []
-
-    lines_aray = [ Vector3f(0, 0, 0) for i in range(300)]
-    chunks = []
-    def __init__(self, camera_obj: Camera, upd_func):
+    def __init__(self, camera_obj: Camera, scene: Scene, upd_func):
         self._camera_obj = camera_obj
+        self._game_scene = scene
         self._update_func = upd_func
 
     def run(self):
@@ -106,8 +55,8 @@ class Render(object):
         glBegin(GL_LINES)
         glColor3d(1, 1, 0)
         for i in range(300)[::2]:
-            _pos_start = self.lines_aray[i]
-            _pos_end = self.lines_aray[i + 1]
+            _pos_start = self._game_scene.lines_aray[i]
+            _pos_end = self._game_scene.lines_aray[i + 1]
             glVertex3d(_pos_start.x, _pos_start.y, _pos_start.z)
             glVertex3d(_pos_end.x, _pos_end.y, _pos_end.z)
         glEnd()
@@ -121,19 +70,19 @@ class Render(object):
         else:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
-        for index, chunk in enumerate(self.chunks):
+        for index, chunk in enumerate(self._game_scene.chunks):
             if index == 0:
                 start_index = 0
             else:
-                start_index = self.chunks[ index - 1] * 2 -1
-            last_index = start_index + chunk * 2 - 1
+                start_index = self._game_scene.chunks[ index -1].chunk_size * 2 -1
+            last_index = start_index + chunk.chunk_size * 2 - 1
             glBegin(GL_TRIANGLE_STRIP)
-            glColor3d(chunk, 1, 0)
-            for i in self.index_array[start_index:last_index]:
+            glColor3d(1, 1, 0)
+            for i in self._game_scene.index_array[start_index:last_index]:
                 try:
-                    x = self.vertex_array[i - 1][0]
-                    y = self.vertex_array[i - 1][1]
-                    z = self.vertex_array[i - 1][2]
+                    x = self._game_scene.vertex_array[i - 1][0]
+                    y = self._game_scene.vertex_array[i - 1][1]
+                    z = self._game_scene.vertex_array[i - 1][2]
                     glVertex3d(x, y, z)
                 except IndexError:
                     print("Error: Triangle index dont have a vertex pair: index ", i - 1)
