@@ -71,18 +71,18 @@ class Render(object):
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
         for index, chunk in enumerate(self._game_scene.chunks):
-            if index == 0:
-                start_index = 0
-            else:
-                start_index = self._game_scene.chunks[ index -1].chunk_size * 2 -1
-            last_index = start_index + chunk.chunk_size * 2 - 1
+            # if index == 0:
+            start_index = 0
+            # else:
+            #     start_index = self._game_scene.chunks[ index -1].area * 2 -1
+            last_index = int(start_index + (chunk.numb_of_faces * chunk.numb_of_faces) * 2  -1)
             glBegin(GL_TRIANGLE_STRIP)
             glColor3d(1, 1, 0)
-            for i in self._game_scene.index_array[start_index:last_index]:
+            for i in chunk.index_array[start_index:last_index]:
                 try:
-                    x = self._game_scene.vertex_array[i - 1][0]
-                    y = self._game_scene.vertex_array[i - 1][1]
-                    z = self._game_scene.vertex_array[i - 1][2]
+                    x = chunk.vertex_array[i - 1].x
+                    y = chunk.vertex_array[i - 1].y
+                    z = chunk.vertex_array[i - 1].z
                     glVertex3d(x, y, z)
                 except IndexError:
                     print("Error: Triangle index dont have a vertex pair: index ", i - 1)
