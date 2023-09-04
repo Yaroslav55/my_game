@@ -137,14 +137,16 @@ class Scene(object):
 
         self.chunks.append(chunk)  # Adding chunk to draw
 
+
     def draw_terrain(self, size):
         offset_vector: Vector3f = Vector3f()
-        DIST = 10
-        for i in range(DIST):
-            for j in range(DIST):
-                self._make_terrain(size, offset_vector)  # + One addition border
-                offset_vector.x = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.x
-                print( "i and j: ", i, j )
-            offset_vector.y = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.y
-            offset_vector.x = self.chunks[0].chunk_position.x
+        self._make_terrain(size, offset_vector)
+        # DIST = 10
+        # for i in range(DIST):
+        #     for j in range(DIST):
+        #         self._make_terrain(size, offset_vector)
+        #         offset_vector.x = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.x
+        #         print( "i and j: ", i, j )
+        #     offset_vector.y = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.y
+        #     offset_vector.x = self.chunks[0].chunk_position.x
         print("-Info: Terrain was created!")
