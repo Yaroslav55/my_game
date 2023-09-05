@@ -6,6 +6,7 @@ from OpenGL.arrays import vbo
 import time
 import numpy as np
 from typing import Union
+from typing import List
 
 from camera import Camera
 from scene import Scene, Vector3f
@@ -33,14 +34,6 @@ class Render(object):
         glutCreateWindow("Transformed Cube")
         # Old init func
 
-        # # Create the VBO
-        # vertices = np.array([[0, 1, 0], [-1, -1, 0], [1, -1, 0]], dtype='f')
-        # self.vertexPositions = vbo.VBO(vertices)
-        #
-        # # Create the index buffer object
-        # self.indices = np.array([[0, 1, 2]], dtype=np.int32)
-        # self.indexPositions = vbo.VBO(self.indices, target=GL_ELEMENT_ARRAY_BUFFER)
-
         glClearColor(0.5, 0.5, 0.5, 1.0)
         glShadeModel(GL_FLAT)
         # -------
@@ -51,6 +44,8 @@ class Render(object):
         glutMainLoop()
 
     def update_frame(self, value):
+
+        self.opengl_error_check()
         self._update_func()
         glutPostRedisplay()
         glutTimerFunc(self._GAME_TIMER, self.update_frame, 0)
@@ -83,18 +78,15 @@ class Render(object):
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
         for index, chunk in enumerate(self._game_scene.chunks):
-            # if index == 0:
             start_index = 0
-            # else:
-            #     start_index = self._game_scene.chunks[ index -1].area * 2 -1
             last_index = int(start_index + (chunk.numb_of_faces * chunk.numb_of_faces) * 2 - 1)
             glBegin(GL_TRIANGLE_STRIP)
             glColor3d(1, 1, 0)
             for i in chunk.index_array[start_index:last_index]:
                 try:
-                    x = chunk.vertex_array[i - 1].x
-                    y = chunk.vertex_array[i - 1].y
-                    z = chunk.vertex_array[i - 1].z
+                    x = chunk.vertex_array[i].x
+                    y = chunk.vertex_array[i].y
+                    z = chunk.vertex_array[i].z
                     glVertex3d(x, y, z)
                 except IndexError:
                     print("Error: Triangle index dont have a vertex pair: index ", i - 1)
@@ -108,7 +100,7 @@ class Render(object):
         glFrustum(-0.5, 0.5, -1.0, 1.0, 1.5, 40.0);
         glMatrixMode(GL_MODELVIEW);
 
-    def _make_camera(self, pos: Union[Vector3f, list[float]], look: Union[Vector3f, list[float]]):
+    def _make_camera(self, pos: Union[Vector3f, List[float]], look: Union[Vector3f, List[float]]):
 
         if self.GAME_MODE == "3D":
             gluLookAt(pos[0], pos[1], pos[2], look[0], look[1], look[2], 0.0, 1.0, 0.0)
@@ -118,45 +110,33 @@ class Render(object):
     def VBO_enable(self):
 
         # Create the VBO
-        # #vertices = np.array([[0, 1, 0], [-1, -1, 0], [1, -1, 0]], dtype='f')
-        # vertex_array = [[0] * 3 for i in range(25)]
-        # indx_array = self._game_scene.chunks[0].index_array
-        # if len(self._game_scene.chunks):
-        #     for i in range(25):
-        #         vertex_array[i][0] = self._game_scene.chunks[0].vertex_array[i].x
-        #         vertex_array[i][1] = self._game_scene.chunks[0].vertex_array[i].y
-        #         vertex_array[i][2] = self._game_scene.chunks[0].vertex_array[i].z
-        #     # for i in range(161):
-        #     #     indx_array[i] = self._game_scene.chunks[0].index_array[i].x
-        #     #
+        if not len(self._game_scene.chunks):
+            return -1
 
-        #index_buffer = (1, 6, 2, 7, 3, 8, 4, 9, 5, 10, 10, 6, 6, 11, 7, 12, 8, 13, 9, 14, 10, 15)
-        index_buffer = (1, 6)#, 2, 7, 3, 8, 4, 9, 5, 10, 6, 11, 7, 12, 8, 13, 9, 14, 10, 15)
-        vertex_arr: list[list[float]] = [
-            [3, 5, 0], [4, 5, 0], [5, 5, 0], [6, 5, 0], [7, 5, 0],
-            [3, 4, 0], [4, 4, 0], [5, 4, 0], [6, 4, 0], [7, 4, 0],
-            [3, 3, 0], [4, 3, 0], [5, 3, 0], [6, 3, 0], [7, 3, 0]
-        ]
+        vertex_array = [[0] * 3 for i in range(25)]
+        for chunk in self._game_scene.chunks:
+            indx_array = chunk.index_array
+            for i in range(25):
+                vertex_array[i][0] = chunk.vertex_array[i].x
+                vertex_array[i][1] = chunk.vertex_array[i].y
+                vertex_array[i][2] = chunk.vertex_array[i].z
+            vertices = np.array(vertex_array, dtype='f')
+            self.vertexPositions = vbo.VBO(vertices)
 
+            # Create the index buffer object
+            self.indices = np.array(indx_array, dtype=np.int32)
+            self.indexPositions = vbo.VBO(self.indices, target=GL_ELEMENT_ARRAY_BUFFER)
 
-        vertices = np.array(vertex_arr, dtype='f')
-        self.vertexPositions = vbo.VBO(vertices)
+            self.indexPositions.bind()
+            glColor3f(1.0, 0.0, 1.0)
+            glLineWidth(1)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+            self.vertexPositions.bind()
+            glEnableVertexAttribArray(0)
+            glVertexAttribPointer(0, 3, GL_FLOAT, False, 0, None)
 
-        # Create the index buffer object
-        self.indices = np.array(index_buffer, dtype=np.int32)
-        self.indexPositions = vbo.VBO(self.indices, target=GL_ELEMENT_ARRAY_BUFFER)
-
-
-        self.indexPositions.bind()
-        glColor3f(1.0, 0.0, 1.0)
-        glLineWidth(1)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-        self.vertexPositions.bind()
-        glEnableVertexAttribArray(0)
-        glVertexAttribPointer(0, 3, GL_FLOAT, False, 0, None)
-
-        # glDrawArrays(GL_TRIANGLES, 0, 3) #This line still works
-        glDrawElements(GL_TRIANGLE_STRIP, 30, GL_UNSIGNED_INT, None)  # This line does work too!
+            # glDrawArrays(GL_TRIANGLES, 0, 3) #This line still works
+            glDrawElements(GL_TRIANGLE_STRIP, len(indx_array), GL_UNSIGNED_INT, None)  # This line does work too!
 
     def display(self):
         global delta_time
@@ -168,15 +148,20 @@ class Render(object):
         glScalef(1.0, 2.0, 1.0)
 
         # self._draw_lines()
-
-        # self._draw_terrain(const_var.TERRAIN_MODE)
+        #self._draw_terrain(const_var.TERRAIN_MODE)
         self.VBO_enable()
         # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         # glColor3f(1.0, 0.0, 1.0)
         # glutSolidCube(0.05)
 
         glFlush()
-        delta_time = time.time() - delta_time
+        delta_time = time.time() - delta_time           # The more the worse
+        print("Delta time: ", delta_time )
+
+    def opengl_error_check(self):
+        error = glGetError()
+        if error != GL_NO_ERROR:
+            print("OPENGL_ERROR: ", gluErrorString(error))
 
     def Keyboard(self, key, x, y):
         cam_angel = self._camera_obj.cam_angel

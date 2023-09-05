@@ -18,14 +18,14 @@ def update():
 
 def game_init():
     game_scene.draw_terrain(4)
-    # game_scene.draw_terrain(4)
+    #game_scene.draw_terrain(4)
     # game_scene.draw_terrain(4)
     # game_scene.draw_grid(0.5)
 
 
 if __name__ == "__main__":
 
-    game_camera = Camera(0.0, 3.0, 4.0, -90, 90)  # Class of main game camera
+    game_camera = Camera(4.0, 3.0, 14.0, -90, 90)  # Class of main game camera
     game_scene = Scene()
     if RENDER_API == "Opengl":
         renderer = Render(game_camera, game_scene, update)

@@ -1,7 +1,7 @@
 import math
 
 import const_variables_store as const_var
-
+from typing import List
 
 class Vector3f:
     def __init__(self, x: float = 0, y: float = 0, z: float = 0):
@@ -17,7 +17,7 @@ class Vector3f:
     def set_zero(self):
         self.set_variables(0.0, 0.0, 0.0)
 
-    def set(self, coord: list[list[int]]):
+    def set(self, coord: List[List[int]]):
         self.x = coord[0]
         self.y = coord[1]
         self.z = coord[2]
@@ -112,8 +112,8 @@ class Scene(object):
         #     [3, 3, 0], [4, 3, 0], [5, 3, 0], [6, 3, 0], [7, 3, 0]
         # ]
         terrain_unit = const_var.TERRAIN_UNIT
-        #offset_vector.z = 0
         chunk = GameChunk(offset_vector, size)
+
         chunk_len = chunk.numb_of_faces  # Chunk length in faces
         row = 0
         count_of_indx_for_chunk = chunk_len * chunk_len - (chunk_len - 1)
@@ -124,29 +124,32 @@ class Scene(object):
             row += chunk_len
         for i in range(count_of_indx_for_chunk)[1::]:
             if i == 1:
-                chunk.index_array.append(1)
+                chunk.index_array.append(0)
             if i % chunk_len == 0:
                 #       Always will be one extra degenerate triangle
-                chunk.index_array.append(i + chunk_len)
-                chunk.index_array.append(i + chunk_len)
-                chunk.index_array.append(i + 1)
-                chunk.index_array.append(i + 1)
+                chunk.index_array.append(i + size)
+                chunk.index_array.append(i + size)
+                chunk.index_array.append(i)
+                chunk.index_array.append(i)
             else:
-                chunk.index_array.append(i + chunk_len)
-                chunk.index_array.append(i + 1)
+                chunk.index_array.append(i + size)
+                chunk.index_array.append(i)
 
         self.chunks.append(chunk)  # Adding chunk to draw
 
 
+
+
     def draw_terrain(self, size):
         offset_vector: Vector3f = Vector3f()
-        self._make_terrain(size, offset_vector)
-        # DIST = 10
-        # for i in range(DIST):
-        #     for j in range(DIST):
-        #         self._make_terrain(size, offset_vector)
-        #         offset_vector.x = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.x
-        #         print( "i and j: ", i, j )
-        #     offset_vector.y = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.y
-        #     offset_vector.x = self.chunks[0].chunk_position.x
+        #self._make_terrain(size, offset_vector)
+        DIST_X = 20
+        DIST_Y = 20
+        for i in range(DIST_Y):
+            for j in range(DIST_X):
+                self._make_terrain(size, offset_vector)
+                offset_vector.x = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.x
+                #print( "i and j: ", i, j )
+            offset_vector.y = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.y
+            offset_vector.x = self.chunks[0].chunk_position.x
         print("-Info: Terrain was created!")
