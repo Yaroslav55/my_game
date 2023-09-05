@@ -2,6 +2,8 @@ import math
 
 import const_variables_store as const_var
 from typing import List
+import numpy as np
+
 
 class Vector3f:
     def __init__(self, x: float = 0, y: float = 0, z: float = 0):
@@ -50,20 +52,27 @@ class Vector3f:
     def __add__(self, value):
         if isinstance(value, __class__):
             return self.__class__(self.x + value.x, self.y + value.y, self.z + value.z)
-        else:       # Increase on constant
+        else:  # Increase on constant
             return self.__class__(self.x + value, self.y + value, self.z + value)
 
 
 class GameChunk(object):
-    MAX_VERTEX_COUNT = 289 // const_var.TERRAIN_UNIT
+    MAX_VERTEX_COUNT = 25 // const_var.TERRAIN_UNIT
 
     def __init__(self, pos: Vector3f, size):
-        self.chunk_position: Vector3f = Vector3f(pos.x, pos.y, pos.z )
+        self.chunk_position: Vector3f = Vector3f(pos.x, pos.y, pos.z)
         self.chunk_size = size
         self.numb_of_faces = size // const_var.TERRAIN_UNIT + 1
-
-        self.vertex_array = [Vector3f(0, 0, 0) for i in range(self.MAX_VERTEX_COUNT)]
+        self.numb_of_triangles = 0
+        # self.vertex_array = [ [0] * 3 for i in range(self.MAX_VERTEX_COUNT)]
+        self.vertex_array = np.empty((self.MAX_VERTEX_COUNT, 3), dtype='f')
         self.index_array = []
+
+        self.vertexBuffer_ID = None
+        self.indexBuffer_ID = None
+
+    def __del__(self):
+        pass
 
 
 class Scene(object):
@@ -119,8 +128,10 @@ class Scene(object):
         count_of_indx_for_chunk = chunk_len * chunk_len - (chunk_len - 1)
         for i in range(chunk_len):
             for j in range(chunk_len):
-                chunk.vertex_array[j + row].set_variables(terrain_unit * j, terrain_unit * i, 0)
-                chunk.vertex_array[j + row] += offset_vector
+                chunk.vertex_array[j + row][0] = (terrain_unit * j) + offset_vector.x
+                chunk.vertex_array[j + row][1] = terrain_unit * i + offset_vector.y
+                chunk.vertex_array[j + row][2] = 0 + offset_vector.z
+                # chunk.vertex_array[j + row] += offset_vector
             row += chunk_len
         for i in range(count_of_indx_for_chunk)[1::]:
             if i == 1:
@@ -134,22 +145,19 @@ class Scene(object):
             else:
                 chunk.index_array.append(i + size)
                 chunk.index_array.append(i)
-
+        chunk.numb_of_triangles = len(chunk.index_array)
         self.chunks.append(chunk)  # Adding chunk to draw
-
-
-
 
     def draw_terrain(self, size):
         offset_vector: Vector3f = Vector3f()
-        #self._make_terrain(size, offset_vector)
-        DIST_X = 20
-        DIST_Y = 20
+        # self._make_terrain(size, offset_vector)
+        DIST_X = 10
+        DIST_Y = 10
         for i in range(DIST_Y):
             for j in range(DIST_X):
                 self._make_terrain(size, offset_vector)
                 offset_vector.x = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.x
-                #print( "i and j: ", i, j )
+                # print( "i and j: ", i, j )
             offset_vector.y = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.y
             offset_vector.x = self.chunks[0].chunk_position.x
         print("-Info: Terrain was created!")

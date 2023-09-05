@@ -21,10 +21,22 @@ class Render(object):
         self._camera_obj = camera_obj
         self._game_scene = scene
         self._update_func = upd_func
-        self.VBO = None
+
 
     def run(self):
         self._opengl_init()
+
+    def VBO_init(self):
+        # Create the VBO
+        if not len(self._game_scene.chunks):
+            return -1
+        for chunk in self._game_scene.chunks:
+            chunk.vertexBuffer_ID = vbo.VBO(chunk.vertex_array)
+            # Create the index buffer object
+            indices = np.array(chunk.index_array, dtype=np.int32)
+            chunk.indexBuffer_ID = vbo.VBO(indices, target=GL_ELEMENT_ARRAY_BUFFER)
+            chunk.indexBuffer_ID.bind()
+
 
     def _opengl_init(self):
         glutInit(sys.argv)
@@ -33,7 +45,7 @@ class Render(object):
         glutInitWindowPosition(100, 100)
         glutCreateWindow("Transformed Cube")
         # Old init func
-
+        self.VBO_init()
         glClearColor(0.5, 0.5, 0.5, 1.0)
         glShadeModel(GL_FLAT)
         # -------
@@ -84,9 +96,9 @@ class Render(object):
             glColor3d(1, 1, 0)
             for i in chunk.index_array[start_index:last_index]:
                 try:
-                    x = chunk.vertex_array[i].x
-                    y = chunk.vertex_array[i].y
-                    z = chunk.vertex_array[i].z
+                    x = chunk.vertex_array[i][0]
+                    y = chunk.vertex_array[i][1]
+                    z = chunk.vertex_array[i][2]
                     glVertex3d(x, y, z)
                 except IndexError:
                     print("Error: Triangle index dont have a vertex pair: index ", i - 1)
@@ -94,10 +106,10 @@ class Render(object):
         #       -------------
 
     def reshape(self, w, h):
-        glViewport(0, 0, w, h);
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        glFrustum(-0.5, 0.5, -1.0, 1.0, 1.5, 40.0);
+        glViewport(0, 0, w, h)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glFrustum(-0.5, 0.5, -1.0, 1.0, 1.5, 40.0)
         glMatrixMode(GL_MODELVIEW);
 
     def _make_camera(self, pos: Union[Vector3f, List[float]], look: Union[Vector3f, List[float]]):
@@ -107,36 +119,22 @@ class Render(object):
         elif self.GAME_MODE == "2D":
             pass
 
-    def VBO_enable(self):
+    def _DrawTerrain_with_VBO(self):
 
         # Create the VBO
         if not len(self._game_scene.chunks):
+            print("Error Chunk array is empty! ")
             return -1
-
-        vertex_array = [[0] * 3 for i in range(25)]
+        glColor3f(1.0, 0.0, 1.0)
+        glLineWidth(1)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
         for chunk in self._game_scene.chunks:
-            indx_array = chunk.index_array
-            for i in range(25):
-                vertex_array[i][0] = chunk.vertex_array[i].x
-                vertex_array[i][1] = chunk.vertex_array[i].y
-                vertex_array[i][2] = chunk.vertex_array[i].z
-            vertices = np.array(vertex_array, dtype='f')
-            self.vertexPositions = vbo.VBO(vertices)
-
-            # Create the index buffer object
-            self.indices = np.array(indx_array, dtype=np.int32)
-            self.indexPositions = vbo.VBO(self.indices, target=GL_ELEMENT_ARRAY_BUFFER)
-
-            self.indexPositions.bind()
-            glColor3f(1.0, 0.0, 1.0)
-            glLineWidth(1)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-            self.vertexPositions.bind()
+            chunk.vertexBuffer_ID.bind()
             glEnableVertexAttribArray(0)
             glVertexAttribPointer(0, 3, GL_FLOAT, False, 0, None)
 
             # glDrawArrays(GL_TRIANGLES, 0, 3) #This line still works
-            glDrawElements(GL_TRIANGLE_STRIP, len(indx_array), GL_UNSIGNED_INT, None)  # This line does work too!
+            glDrawElements(GL_TRIANGLE_STRIP, chunk.numb_of_triangles, GL_UNSIGNED_INT, None)  # This line does work too!
 
     def display(self):
         global delta_time
@@ -149,14 +147,15 @@ class Render(object):
 
         # self._draw_lines()
         #self._draw_terrain(const_var.TERRAIN_MODE)
-        self.VBO_enable()
+        self._DrawTerrain_with_VBO()
+
         # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         # glColor3f(1.0, 0.0, 1.0)
         # glutSolidCube(0.05)
 
         glFlush()
         delta_time = time.time() - delta_time           # The more the worse
-        print("Delta time: ", delta_time )
+        print("Delta time: ", delta_time)
 
     def opengl_error_check(self):
         error = glGetError()
