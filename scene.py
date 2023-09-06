@@ -151,8 +151,8 @@ class Scene(object):
     def draw_terrain(self, size):
         offset_vector: Vector3f = Vector3f()
         # self._make_terrain(size, offset_vector)
-        DIST_X = 1
-        DIST_Y = 1
+        DIST_X = 2
+        DIST_Y = 2
         for i in range(DIST_Y):
             for j in range(DIST_X):
                 self._make_terrain(size, offset_vector)

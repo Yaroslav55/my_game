@@ -24,6 +24,33 @@ class Render(object):
         self._game_scene = scene
         self._update_func = upd_func
 
+        self.vertexShaderSource = """
+                    #version 330 core
+                    layout (location = 0) in vec3 aPos;
+                    layout (location = 1) in vec3 aColor;
+                    out vec3 ourColor;
+                        void main()
+                        {
+                            gl_Position = vec4(aPos, 1.0);
+                            ourColor = aColor;
+                    }"""
+        self.fragmentShaderSource = """
+                    #version 330 core
+                    out vec4 FragColor;
+                    in vec3 ourColor;
+                        void main()
+                        {
+                            FragColor = vec4(ourColor, 1.0f);
+                        }
+                    """
+        self.VAO = None
+        self.VBO = None
+        self.vertices = np.array((
+            # positions       colors
+         0.5, -0.5, 0.0,   1.0, 0.0, 0.0,       # bottom right
+        -0.5, -0.5, 0.0,   0.0, 1.0, 0.0,       # bottom left
+         0.0,  0.5, 0.0,   0.0, 0.0, 1.0        # top
+        ), dtype='f')
     def run(self):
         self._opengl_init()
 
@@ -40,15 +67,52 @@ class Render(object):
             glEnableVertexAttribArray(0)
 
     # Процедура подготовки шейдера (тип шейдера, текст шейдера)
-    def create_shader(self, shader_type, source):
-        # Создаем пустой объект шейдера
-        shader = glCreateShader(shader_type)
-        # Привязываем текст шейдера к пустому объекту шейдера
-        glShaderSource(shader, source)
-        # Компилируем шейдер
-        glCompileShader(shader)
-        # Возвращаем созданный шейдер
-        return shader
+    def shader_init(self):
+        vertexShader = glCreateShader(GL_VERTEX_SHADER)
+        glShaderSource(vertexShader, self.vertexShaderSource)
+        glCompileShader(vertexShader)
+        success = glGetShaderiv(vertexShader, GL_COMPILE_STATUS)
+        if not success:
+            info_mesg = glGetShaderInfoLog(vertexShader)
+            print("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n", info_mesg)
+        # fragment        shader
+        fragmentShader = glCreateShader(GL_FRAGMENT_SHADER)
+        glShaderSource(fragmentShader, self.fragmentShaderSource)
+        glCompileShader(fragmentShader)
+        # check for shader compile errors
+        success = glGetShaderiv(fragmentShader, GL_COMPILE_STATUS)
+        if not success:
+            info_mesg = glGetShaderInfoLog(fragmentShader)
+            print("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n", info_mesg)
+        # link        shaders
+
+        shaderProgram = glCreateProgram()
+        glAttachShader(shaderProgram, vertexShader)
+        glAttachShader(shaderProgram, fragmentShader)
+        glLinkProgram(shaderProgram)
+        # check        for linking errors
+        success = glGetProgramiv(shaderProgram, GL_LINK_STATUS)
+        if not success:
+            info_mesg = glGetProgramInfoLog(shaderProgram)
+            print( "ERROR::SHADER::PROGRAM::LINKING_FAILED\n", info_mesg )
+        glDeleteShader(vertexShader)
+        glDeleteShader(fragmentShader)
+
+        self.VAO = glGenVertexArrays(1)
+        self.VBO = glGenBuffers(1)
+        # bind        the        Vertex        Array        Object        first, then        bind and set        vertex        buffer(s), and then        configure        vertex        attributes(s).
+        glBindVertexArray(self.VAO)
+        glBindBuffer(GL_ARRAY_BUFFER, self.VBO)
+        glBufferData(GL_ARRAY_BUFFER, len(self.vertices) * 4, self.vertices, GL_STATIC_DRAW)
+
+        # position        attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, False, 6 * 4, None)
+        glEnableVertexAttribArray(0)
+        # color        attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, False, 6 * 4, c_void_p(12))
+        glEnableVertexAttribArray(1)
+        glUseProgram(shaderProgram)
+
 
     def _opengl_init(self):
         glutInit(sys.argv)
@@ -57,37 +121,11 @@ class Render(object):
         glutInitWindowPosition(100, 100)
         glutCreateWindow("Transformed Cube")
         # Old init func
-        #self.VBO_init()
-        glClearColor(0.5, 0.5, 0.5, 1.0)
-        vertex = self.create_shader(GL_VERTEX_SHADER, """
-        varying vec4 vertex_color;
-                    void main(){
-                        gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-                        vertex_color = gl_Color;
-                    }""")
-        # Создаем фрагментный шейдер:
-        # Определяет цвет каждого фрагмента как "смешанный" цвет его вершин
-        fragment = self.create_shader(GL_FRAGMENT_SHADER, """
-        varying vec4 vertex_color;
-                    void main() {
-                        gl_FragColor = vertex_color;
-        }""")
-        # Создаем пустой объект шейдерной программы
-        program = glCreateProgram()
-        # Приcоединяем вершинный шейдер к программе
-        glAttachShader(program, vertex)
-        # Присоединяем фрагментный шейдер к программе
-        glAttachShader(program, fragment)
-        # "Собираем" шейдерную программу
-        glLinkProgram(program)
-        # Сообщаем OpenGL о необходимости использовать данную шейдерну программу при отрисовке объектов
-        glUseProgram(program)
-        # Определяем массив вершин (три вершины по три координаты)
-        self.pointdata = [[0, 0.5, 0], [-0.5, -0.5, 0], [0.5, -0.5, 0]]
-        # Определяем массив цветов (по одному цвету для каждой вершины)
-        self.pointcolor = [[1, 1, 0], [0, 1, 1], [1, 0, 1]]
+        # self.VBO_init()
+        self.shader_init()
+        print(float(glGetString(GL_VERSION)[:3]))
 
-        #glShadeModel(GL_FLAT)
+        # glShadeModel(GL_FLAT)
         # -------
         glutDisplayFunc(self.display)
         glutSpecialFunc(self.Keyboard)
@@ -255,42 +293,35 @@ class Render(object):
         global delta_time
         delta_time = time.time()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
+        glClearColor(0.2, 0.3, 0.3, 1.0)
         glLoadIdentity()
         self._make_camera(self._camera_obj.get_postion(), self._camera_obj.get_point_of_view())
         glScalef(1.0, 2.0, 1.0)
 
-        if 0:
+        if 1:
             glLineWidth(1)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
         else:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
-        im = Image.open("test_img.jpg")
-        convert = im.convert("RGBA")
-        image_data = convert.tobytes()
-        glEnableClientState(GL_VERTEX_ARRAY)  # Включаем использование массива вершин
-        glEnableClientState(GL_COLOR_ARRAY)
-        glVertexPointer(3, GL_FLOAT, 0, self.pointdata)
-        # Указываем, где взять массив цветов:
-        # Параметры аналогичны, но указывается массив цветов
-        glColorPointer(3, GL_FLOAT, 0, self.pointcolor)
+        glBindVertexArray(self.VAO)
         glDrawArrays(GL_TRIANGLES, 0, 3)
-        glDisableClientState(GL_VERTEX_ARRAY)  # Отключаем использование массива вершин
-        glDisableClientState(GL_COLOR_ARRAY)  # Отключаем использование массива цветов
-        glutSwapBuffers()
 
         # self.VAO_enable()
-        # self.drawCube()
+        #self.drawCube()
         # self._draw_lines()
-        # self._draw_terrain(const_var.TERRAIN_MODE)
+        # glDeleteVertexArrays(1, [self.VAO])
+        # glDeleteBuffers(1, [self.VBO])
+        # glDeleteProgram(shaderProgram)
+        self._draw_terrain(const_var.TERRAIN_MODE)
         # self._DrawTerrain_with_VBO()
 
         # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         # glColor3f(1.0, 0.0, 1.0)
         # glutSolidCube(0.05)
-
-        glFlush()
+        print("eee ")
+        glutSwapBuffers()
+        #glFlush()
         delta_time = time.time() - delta_time  # The more the worse
         # print("Delta time: ", delta_time)
 
