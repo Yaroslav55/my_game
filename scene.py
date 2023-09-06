@@ -57,7 +57,7 @@ class Vector3f:
 
 
 class GameChunk(object):
-    MAX_VERTEX_COUNT = 25 // const_var.TERRAIN_UNIT
+    MAX_VERTEX_COUNT = 81 // const_var.TERRAIN_UNIT
 
     def __init__(self, pos: Vector3f, size):
         self.chunk_position: Vector3f = Vector3f(pos.x, pos.y, pos.z)
@@ -151,8 +151,8 @@ class Scene(object):
     def draw_terrain(self, size):
         offset_vector: Vector3f = Vector3f()
         # self._make_terrain(size, offset_vector)
-        DIST_X = 10
-        DIST_Y = 10
+        DIST_X = 1
+        DIST_Y = 1
         for i in range(DIST_Y):
             for j in range(DIST_X):
                 self._make_terrain(size, offset_vector)

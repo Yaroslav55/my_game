@@ -2,6 +2,8 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from OpenGL.arrays import vbo
+from OpenGL.GL import shaders
+from PIL import Image
 
 import time
 import numpy as np
@@ -22,7 +24,6 @@ class Render(object):
         self._game_scene = scene
         self._update_func = upd_func
 
-
     def run(self):
         self._opengl_init()
 
@@ -31,12 +32,23 @@ class Render(object):
         if not len(self._game_scene.chunks):
             return -1
         for chunk in self._game_scene.chunks:
-            chunk.vertexBuffer_ID = vbo.VBO(chunk.vertex_array)
+            chunk.vertexBuffer_ID = vbo.VBO(chunk.vertex_array, usage=GL_STATIC_DRAW)
             # Create the index buffer object
             indices = np.array(chunk.index_array, dtype=np.int32)
-            chunk.indexBuffer_ID = vbo.VBO(indices, target=GL_ELEMENT_ARRAY_BUFFER)
+            chunk.indexBuffer_ID = vbo.VBO(indices, usage=GL_STATIC_DRAW, target=GL_ELEMENT_ARRAY_BUFFER)
             chunk.indexBuffer_ID.bind()
+            glEnableVertexAttribArray(0)
 
+    # Процедура подготовки шейдера (тип шейдера, текст шейдера)
+    def create_shader(self, shader_type, source):
+        # Создаем пустой объект шейдера
+        shader = glCreateShader(shader_type)
+        # Привязываем текст шейдера к пустому объекту шейдера
+        glShaderSource(shader, source)
+        # Компилируем шейдер
+        glCompileShader(shader)
+        # Возвращаем созданный шейдер
+        return shader
 
     def _opengl_init(self):
         glutInit(sys.argv)
@@ -45,9 +57,37 @@ class Render(object):
         glutInitWindowPosition(100, 100)
         glutCreateWindow("Transformed Cube")
         # Old init func
-        self.VBO_init()
+        #self.VBO_init()
         glClearColor(0.5, 0.5, 0.5, 1.0)
-        glShadeModel(GL_FLAT)
+        vertex = self.create_shader(GL_VERTEX_SHADER, """
+        varying vec4 vertex_color;
+                    void main(){
+                        gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+                        vertex_color = gl_Color;
+                    }""")
+        # Создаем фрагментный шейдер:
+        # Определяет цвет каждого фрагмента как "смешанный" цвет его вершин
+        fragment = self.create_shader(GL_FRAGMENT_SHADER, """
+        varying vec4 vertex_color;
+                    void main() {
+                        gl_FragColor = vertex_color;
+        }""")
+        # Создаем пустой объект шейдерной программы
+        program = glCreateProgram()
+        # Приcоединяем вершинный шейдер к программе
+        glAttachShader(program, vertex)
+        # Присоединяем фрагментный шейдер к программе
+        glAttachShader(program, fragment)
+        # "Собираем" шейдерную программу
+        glLinkProgram(program)
+        # Сообщаем OpenGL о необходимости использовать данную шейдерну программу при отрисовке объектов
+        glUseProgram(program)
+        # Определяем массив вершин (три вершины по три координаты)
+        self.pointdata = [[0, 0.5, 0], [-0.5, -0.5, 0], [0.5, -0.5, 0]]
+        # Определяем массив цветов (по одному цвету для каждой вершины)
+        self.pointcolor = [[1, 1, 0], [0, 1, 1], [1, 0, 1]]
+
+        #glShadeModel(GL_FLAT)
         # -------
         glutDisplayFunc(self.display)
         glutSpecialFunc(self.Keyboard)
@@ -83,12 +123,6 @@ class Render(object):
     def _draw_terrain(self, line_mode: bool = 0):
 
         #       Draw game terrain
-        if line_mode:
-            glLineWidth(1)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-        else:
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-
         for index, chunk in enumerate(self._game_scene.chunks):
             start_index = 0
             last_index = int(start_index + (chunk.numb_of_faces * chunk.numb_of_faces) * 2 - 1)
@@ -119,22 +153,103 @@ class Render(object):
         elif self.GAME_MODE == "2D":
             pass
 
+    def drawCube(self):
+        glEnable(GL_TEXTURE_2D)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
+
+        def load_textureToGPU():
+            im = None
+            try:
+                im = Image.open("test_img.jpg")
+                convert = im.convert("RGBA")
+                image_data = convert.tobytes()
+            except OSError:
+                print("Cannot open img")
+                return -1
+            texture = glGenTextures(1)
+            glBindTexture(GL_TEXTURE_2D, texture)
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 288, 288,
+                         0, GL_RGBA, GL_UNSIGNED_BYTE, image_data)
+            glGenerateMipmap(GL_TEXTURE_2D)
+
+            return texture
+
+        glBindTexture(GL_TEXTURE_2D, load_textureToGPU())
+        glVertexPointer(3, GL_FLOAT, 0, None)
+        """Draw a cube with texture coordinates"""
+        glBegin(GL_QUADS);
+        glTexCoord2f(0.0, 0.0);
+        glVertex3f(-1.0, -1.0, 1.0);
+        glTexCoord2f(1.0, 0.0);
+        glVertex3f(1.0, -1.0, 1.0);
+        glTexCoord2f(1.0, 1.0);
+        glVertex3f(1.0, 1.0, 1.0);
+        glTexCoord2f(0.0, 1.0);
+        glVertex3f(-1.0, 1.0, 1.0);
+        glTexCoord2f(1.0, 0.0);
+        glVertex3f(-1.0, -1.0, -1.0);
+        glTexCoord2f(1.0, 1.0);
+        glVertex3f(-1.0, 1.0, -1.0);
+        glTexCoord2f(0.0, 1.0);
+        glVertex3f(1.0, 1.0, -1.0);
+        glTexCoord2f(0.0, 0.0);
+        glVertex3f(1.0, -1.0, -1.0);
+        glTexCoord2f(0.0, 1.0);
+        glVertex3f(-1.0, 1.0, -1.0);
+        glTexCoord2f(0.0, 0.0);
+        glVertex3f(-1.0, 1.0, 1.0);
+        glTexCoord2f(1.0, 0.0);
+        glVertex3f(1.0, 1.0, 1.0);
+        glTexCoord2f(1.0, 1.0);
+        glVertex3f(1.0, 1.0, -1.0);
+        glTexCoord2f(1.0, 1.0);
+        glVertex3f(-1.0, -1.0, -1.0);
+        glTexCoord2f(0.0, 1.0);
+        glVertex3f(1.0, -1.0, -1.0);
+        glTexCoord2f(0.0, 0.0);
+        glVertex3f(1.0, -1.0, 1.0);
+        glTexCoord2f(1.0, 0.0);
+        glVertex3f(-1.0, -1.0, 1.0);
+        glTexCoord2f(1.0, 0.0);
+        glVertex3f(1.0, -1.0, -1.0);
+        glTexCoord2f(1.0, 1.0);
+        glVertex3f(1.0, 1.0, -1.0);
+        glTexCoord2f(0.0, 1.0);
+        glVertex3f(1.0, 1.0, 1.0);
+        glTexCoord2f(0.0, 0.0);
+        glVertex3f(1.0, -1.0, 1.0);
+        glTexCoord2f(0.0, 0.0);
+        glVertex3f(-1.0, -1.0, -1.0);
+        glTexCoord2f(1.0, 0.0);
+        glVertex3f(-1.0, -1.0, 1.0);
+        glTexCoord2f(1.0, 1.0);
+        glVertex3f(-1.0, 1.0, 1.0);
+        glTexCoord2f(0.0, 1.0);
+        glVertex3f(-1.0, 1.0, -1.0);
+        glEnd()
+
     def _DrawTerrain_with_VBO(self):
 
         # Create the VBO
         if not len(self._game_scene.chunks):
             print("Error Chunk array is empty! ")
             return -1
+        glDisable(GL_LIGHTING)
         glColor3f(1.0, 0.0, 1.0)
-        glLineWidth(1)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+
         for chunk in self._game_scene.chunks:
             chunk.vertexBuffer_ID.bind()
-            glEnableVertexAttribArray(0)
             glVertexAttribPointer(0, 3, GL_FLOAT, False, 0, None)
-
             # glDrawArrays(GL_TRIANGLES, 0, 3) #This line still works
-            glDrawElements(GL_TRIANGLE_STRIP, chunk.numb_of_triangles, GL_UNSIGNED_INT, None)  # This line does work too!
+            glDrawElements(GL_TRIANGLE_STRIP, chunk.numb_of_triangles, GL_UNSIGNED_INT,
+                           None)  # This line does work too!
+
+    def VAO_enable(self):
+        pass
 
     def display(self):
         global delta_time
@@ -145,17 +260,39 @@ class Render(object):
         self._make_camera(self._camera_obj.get_postion(), self._camera_obj.get_point_of_view())
         glScalef(1.0, 2.0, 1.0)
 
+        if 0:
+            glLineWidth(1)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        else:
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+
+        im = Image.open("test_img.jpg")
+        convert = im.convert("RGBA")
+        image_data = convert.tobytes()
+        glEnableClientState(GL_VERTEX_ARRAY)  # Включаем использование массива вершин
+        glEnableClientState(GL_COLOR_ARRAY)
+        glVertexPointer(3, GL_FLOAT, 0, self.pointdata)
+        # Указываем, где взять массив цветов:
+        # Параметры аналогичны, но указывается массив цветов
+        glColorPointer(3, GL_FLOAT, 0, self.pointcolor)
+        glDrawArrays(GL_TRIANGLES, 0, 3)
+        glDisableClientState(GL_VERTEX_ARRAY)  # Отключаем использование массива вершин
+        glDisableClientState(GL_COLOR_ARRAY)  # Отключаем использование массива цветов
+        glutSwapBuffers()
+
+        # self.VAO_enable()
+        # self.drawCube()
         # self._draw_lines()
-        #self._draw_terrain(const_var.TERRAIN_MODE)
-        self._DrawTerrain_with_VBO()
+        # self._draw_terrain(const_var.TERRAIN_MODE)
+        # self._DrawTerrain_with_VBO()
 
         # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         # glColor3f(1.0, 0.0, 1.0)
         # glutSolidCube(0.05)
 
         glFlush()
-        delta_time = time.time() - delta_time           # The more the worse
-        print("Delta time: ", delta_time)
+        delta_time = time.time() - delta_time  # The more the worse
+        # print("Delta time: ", delta_time)
 
     def opengl_error_check(self):
         error = glGetError()

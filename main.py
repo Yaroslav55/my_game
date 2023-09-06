@@ -17,7 +17,7 @@ def update():
 
 
 def game_init():
-    game_scene.draw_terrain(4)
+    game_scene.draw_terrain(8)
     #game_scene.draw_terrain(4)
     # game_scene.draw_terrain(4)
     # game_scene.draw_grid(0.5)
