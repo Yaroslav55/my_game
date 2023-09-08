@@ -31,6 +31,7 @@ class Camera(object):
         else:
             self.cam_angel = angel
         self.cam_angel_h = angel_y
+        print(self.cam_angel_h)
 
     def get_postion(self) -> [float, float, float]:
         return [self._pos_x, self._pos_y, self._pos_z]

@@ -1,4 +1,5 @@
 import math
+import time
 
 import const_variables_store as const_var
 from typing import List
@@ -58,13 +59,14 @@ class Vector3f:
 class Mesh(object):
     MAX_VERTEX_COUNT = 81
     def __init__(self):
-        # One vertex = [ positionXYZ, ColorRGB, TexCoord ] - 8 variables * type float 4 byte - 32 bytes
+        # One vertex = [ positionXYZ, ColorRGB, TexCoordUV ] - 8 variables * type float 4 byte - 32 bytes
         self.vertex_array = np.empty((self.MAX_VERTEX_COUNT, 8), dtype='f')
         self.index_array = []
-        self.texture = "test_img.jpg"
+        self.texture_name = "tiles/Basic_Buch_Tiles_Compiled.png"
         self.VAO = None
         self.VBO = None
         self.EBO = None
+        self.material = None
 
     def __del__(self):
         pass
@@ -136,52 +138,18 @@ class Scene(object):
         terrain_unit = const_var.TERRAIN_UNIT
         chunk = GameChunk(offset_vector, size)
 
-        # chunk.vertex_array[0][0] = 0
-        # chunk.vertex_array[0][1] = 0
-        # chunk.vertex_array[0][2] = 0
-        # # Color
-        # chunk.vertex_array[0][3] = 1.0
-        # chunk.vertex_array[0][4] = 0.0
-        # chunk.vertex_array[0][5] = 1.0
-        # # Texture coord
-        # chunk.vertex_array[0][6] = 0.0
-        # chunk.vertex_array[0][7] = 0.0
-        # #################
-        # chunk.vertex_array[1][0] = 5
-        # chunk.vertex_array[1][1] = 0
-        # chunk.vertex_array[1][2] = 0
-        # # Color
-        # chunk.vertex_array[1][3] = 1.0
-        # chunk.vertex_array[1][4] = 0.0
-        # chunk.vertex_array[1][5] = 1.0
-        # # Texture coord
-        # chunk.vertex_array[1][6] = 1.0
-        # chunk.vertex_array[1][7] = 0.0
-        # ##################
-        # chunk.vertex_array[2][0] = 5
-        # chunk.vertex_array[2][1] = 5
-        # chunk.vertex_array[2][2] = 0
-        # # Color
-        # chunk.vertex_array[2][3] = 1.0
-        # chunk.vertex_array[2][4] = 0.0
-        # chunk.vertex_array[2][5] = 1.0
-        # # Texture coord
-        # chunk.vertex_array[2][6] = 1.0
-        # chunk.vertex_array[2][7] = 1.0
-
         chunk_len = chunk.numb_of_faces # Chunk length in faces
         row = 0
         count_of_indx_for_chunk = chunk_len * chunk_len - (chunk_len - 1)
         upper_texture_index = [(0.0, 1.0), (1.0, 1.0)]
         lower_texture_index = [(0.0, 0.0), (1.0, 0.0)]
-
         txt_index = 0
         for i in range(chunk_len):
             for j in range(chunk_len):
                 # Position
                 chunk.vertex_array[j + row][0] = (terrain_unit * j) + offset_vector.x
-                chunk.vertex_array[j + row][1] = terrain_unit * i + offset_vector.y
-                chunk.vertex_array[j + row][2] = 0 + offset_vector.z
+                chunk.vertex_array[j + row][1] = 0 + offset_vector.y
+                chunk.vertex_array[j + row][2] = terrain_unit * i + offset_vector.z
                 # Color
                 chunk.vertex_array[j + row][3] = 1.0
                 chunk.vertex_array[j + row][4] = 0.0
@@ -194,10 +162,11 @@ class Scene(object):
                 txt_index += 1
                 if txt_index >= 2:
                     txt_index = 0
-                print(curent_text_coord)
-                chunk.vertex_array[j + row][6] = curent_text_coord[0]
-                chunk.vertex_array[j + row][7] = curent_text_coord[1]
+                #print(curent_text_coord)
+                chunk.vertex_array[j + row][6] = curent_text_coord[0] /32 + 0.03125 * 14
+                chunk.vertex_array[j + row][7] = curent_text_coord[1] /14 + 0.71428 * 5
                 # chunk.vertex_array[j + row] += offset_vector
+
             txt_index = 0
             row += chunk_len
 
@@ -219,13 +188,13 @@ class Scene(object):
     def draw_terrain(self, size):
         offset_vector: Vector3f = Vector3f()
         self._make_terrain(size, offset_vector)
-        DIST_X = 2
-        DIST_Y = 2
-        # for i in range(DIST_Y):
-        #     for j in range(DIST_X):
-        #         self._make_terrain(size, offset_vector)
-        #         offset_vector.x = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.x
-        #         # print( "i and j: ", i, j )
-        #     offset_vector.y = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.y
-        #     offset_vector.x = self.chunks[0].chunk_position.x
+        DIST_X = 15
+        DIST_Y = 15
+        for i in range(DIST_Y):
+            for j in range(DIST_X):
+                self._make_terrain(size, offset_vector)
+                offset_vector.x = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.x
+                # print( "i and j: ", i, j )
+            offset_vector.z = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.z
+            offset_vector.x = self.chunks[0].chunk_position.x
         print("-Info: Terrain was created!")
