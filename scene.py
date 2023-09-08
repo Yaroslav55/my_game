@@ -127,7 +127,15 @@ class Scene(object):
                                                              start_old_line.z)
 
         print("d")
-
+    def _set_txt_coord(self, posX, posY):
+        tile_w = 512
+        tile_h = 224
+        txt_size = 16
+        unit_X = 1 / (tile_w / txt_size)
+        unit_Y = 1 / (tile_h / txt_size)
+        txtr_posU = unit_X * posX
+        txtr_posV = unit_Y * posY
+        return (txtr_posU, txtr_posV)
     def _make_terrain(self, size, offset_vector: Vector3f):
         # index_buffer = (1, 6, 2, 7, 3, 8, 4, 9, 5, 10, 10, 6, 6, 11, 7, 12, 8, 13, 9, 14, 10, 15)
         # vertex_arr: list[list[float]] = [
@@ -141,8 +149,8 @@ class Scene(object):
         chunk_len = chunk.numb_of_faces # Chunk length in faces
         row = 0
         count_of_indx_for_chunk = chunk_len * chunk_len - (chunk_len - 1)
-        upper_texture_index = [(0.0, 1.0), (1.0, 1.0)]
-        lower_texture_index = [(0.0, 0.0), (1.0, 0.0)]
+        upper_texture_index = [(0.0/32, 1.0/14), (1.0/32, 1.0/14)]
+        lower_texture_index = [(0.0/32, 0.0/14), (1.0/32, 0.0/14)]
         txt_index = 0
         for i in range(chunk_len):
             for j in range(chunk_len):
@@ -162,9 +170,9 @@ class Scene(object):
                 txt_index += 1
                 if txt_index >= 2:
                     txt_index = 0
-                #print(curent_text_coord)
-                chunk.vertex_array[j + row][6] = curent_text_coord[0] /32 + 0.03125 * 14
-                chunk.vertex_array[j + row][7] = curent_text_coord[1] /14 + 0.71428 * 5
+                txtr_pos = self._set_txt_coord(14, 5)
+                chunk.vertex_array[j + row][6] = curent_text_coord[0] + txtr_pos[0]
+                chunk.vertex_array[j + row][7] = curent_text_coord[1] + txtr_pos[1]
                 # chunk.vertex_array[j + row] += offset_vector
 
             txt_index = 0
