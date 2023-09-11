@@ -10,7 +10,6 @@ from typing import List
 
 from camera import Camera
 from scene import Scene, Vector3f
-import const_variables_store as const_var
 
 
 class Render(object):
@@ -73,10 +72,17 @@ class Render(object):
         self._opengl_init()
 
     def _load_Chunks_in_VAO(self):
+        print(__name__, " run ")
         float_size = 4  # min size of element in one vertex
         for cur_chunk in self._game_scene.chunks:
             vertices = cur_chunk.vertex_array
             indices = np.array((cur_chunk.index_array), dtype=np.int32)
+            # index_buffer = (1, 6, 2, 7, 3, 8, 4, 9, 5, 10, 10, 6, 6, 11, 7, 12, 8, 13, 9, 14, 10, 15)
+            # vertex_arr: list[list[float]] = [
+            #     [3, 5, 0], [4, 5, 0], [5, 5, 0], [6, 5, 0], [7, 5, 0],
+            #     [3, 4, 0], [4, 4, 0], [5, 4, 0], [6, 4, 0], [7, 4, 0],
+            #     [3, 3, 0], [4, 3, 0], [5, 3, 0], [6, 3, 0], [7, 3, 0]
+            # ]
             cur_chunk.VAO = glGenVertexArrays(1)
             cur_chunk.VBO = glGenBuffers(1)
             cur_chunk.EBO = glGenBuffers(1)
@@ -101,6 +107,7 @@ class Render(object):
             glEnableVertexAttribArray(2)
             # load mesh textures
             self.load_textures(cur_chunk.material, cur_chunk.texture_name)
+        return 0
 
     def set_shaders(self, vertexShader_source, fragmentShaderSource):
         def compileShader(type, shader_source):
@@ -140,6 +147,10 @@ class Render(object):
         return 0
 
     def _opengl_init(self):
+        glutInitContextVersion(3, 1)
+        #glutInitContextFlags(GLUT_FORWARD_COMPATIBLE)
+        #glutInitContextProfile(GLUT_CORE_PROFILE)
+
         glutInit(sys.argv)
         glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB)
         glutInitWindowSize(800, 800)
@@ -353,9 +364,9 @@ class Render(object):
             self.set_shaders(self.default_vertexShaderSource, self.default_fragmentShaderSource)
             self._draw_terrain(0)
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-        glColor3f(1.0, 0.0, 1.0)
-        glutSolidCube(0.05)
+        # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        # glColor3f(1.0, 0.0, 1.0)
+        # glutSolidCube(0.05)
         glFlush()
         delta_time = time.time() - delta_time  # The more the worse
         #print("Delta time: ", delta_time)

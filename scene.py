@@ -152,16 +152,18 @@ class Scene(object):
         upper_texture_index = [(0.0/32, 1.0/14), (1.0/32, 1.0/14)]
         lower_texture_index = [(0.0/32, 0.0/14), (1.0/32, 0.0/14)]
         txt_index = 0
+        _tmp_vertex_aray = list()
         for i in range(chunk_len):
             for j in range(chunk_len):
+                _tmp_array = [0] * 8
                 # Position
-                chunk.vertex_array[j + row][0] = (terrain_unit * j) + offset_vector.x
-                chunk.vertex_array[j + row][1] = 0 + offset_vector.y
-                chunk.vertex_array[j + row][2] = terrain_unit * i + offset_vector.z
+                _tmp_array[0] = (terrain_unit * j) + offset_vector.x
+                _tmp_array[1] = 0 + offset_vector.y
+                _tmp_array[2] = terrain_unit * i + offset_vector.z
                 # Color
-                chunk.vertex_array[j + row][3] = 1.0
-                chunk.vertex_array[j + row][4] = 0.0
-                chunk.vertex_array[j + row][5] = 1.0
+                _tmp_array[3] = 1.0
+                _tmp_array[4] = 0.0
+                _tmp_array[5] = 1.0
                 # Texture coord
                 if i % 2 == 0:
                     curent_text_coord = lower_texture_index[txt_index]
@@ -171,13 +173,12 @@ class Scene(object):
                 if txt_index >= 2:
                     txt_index = 0
                 txtr_pos = self._set_txt_coord(14, 5)
-                chunk.vertex_array[j + row][6] = curent_text_coord[0] + txtr_pos[0]
-                chunk.vertex_array[j + row][7] = curent_text_coord[1] + txtr_pos[1]
+                _tmp_array[6] = curent_text_coord[0] + txtr_pos[0]
+                _tmp_array[7] = curent_text_coord[1] + txtr_pos[1]
                 # chunk.vertex_array[j + row] += offset_vector
-
+                _tmp_vertex_aray.append(_tmp_array)
             txt_index = 0
             row += chunk_len
-
         for i in range(count_of_indx_for_chunk)[1::]:
             if i == 1:
                 chunk.index_array.append(0)
@@ -191,13 +192,15 @@ class Scene(object):
                 chunk.index_array.append(i + size)
                 chunk.index_array.append(i)
         chunk.numb_of_triangles = len(chunk.index_array)
+        chunk.vertex_array = np.array(_tmp_vertex_aray, dtype='f')
         self.chunks.append(chunk)  # Adding chunk to draw
 
     def draw_terrain(self, size):
+        delta_time = time.time()
         offset_vector: Vector3f = Vector3f()
-        self._make_terrain(size, offset_vector)
-        DIST_X = 15
-        DIST_Y = 15
+        #self._make_terrain(size, offset_vector)
+        DIST_X = 10
+        DIST_Y = 10
         for i in range(DIST_Y):
             for j in range(DIST_X):
                 self._make_terrain(size, offset_vector)
@@ -206,3 +209,4 @@ class Scene(object):
             offset_vector.z = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.z
             offset_vector.x = self.chunks[0].chunk_position.x
         print("-Info: Terrain was created!")
+        print("Time spent for creating terrain ",  time.time() - delta_time)
