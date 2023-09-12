@@ -1,4 +1,5 @@
 import math
+import random
 import time
 
 import const_variables_store as const_var
@@ -56,8 +57,10 @@ class Vector3f:
         else:  # Increase on constant
             return self.__class__(self.x + value, self.y + value, self.z + value)
 
+
 class Mesh(object):
     MAX_VERTEX_COUNT = 81
+
     def __init__(self):
         # One vertex = [ positionXYZ, ColorRGB, TexCoordUV ] - 8 variables * type float 4 byte - 32 bytes
         self.vertex_array = np.empty((self.MAX_VERTEX_COUNT, 8), dtype='f')
@@ -70,8 +73,10 @@ class Mesh(object):
 
     def __del__(self):
         pass
+
+
 class GameChunk(Mesh):
-    #MAX_VERTEX_COUNT = 81 // const_var.TERRAIN_UNIT
+    # MAX_VERTEX_COUNT = 81 // const_var.TERRAIN_UNIT
 
     def __init__(self, pos: Vector3f, size):
         Mesh.__init__(self)
@@ -91,11 +96,10 @@ class GameChunk(Mesh):
 
 
 class Scene(object):
-    def __init__(self):
+    def __init__(self, ):
 
         self.lines_aray = [Vector3f(0, 0, 0) for i in range(300)]
         self.chunks: GameChunk = []
-
     def draw_grid(self, grid_size=1) -> None:
         grid_size = const_var.GRID_UNIT
         num_lines = 40
@@ -127,6 +131,7 @@ class Scene(object):
                                                              start_old_line.z)
 
         print("d")
+
     def _set_txt_coord(self, posX, posY):
         tile_w = 512
         tile_h = 224
@@ -135,7 +140,8 @@ class Scene(object):
         unit_Y = 1 / (tile_h / txt_size)
         txtr_posU = unit_X * posX
         txtr_posV = unit_Y * posY
-        return (txtr_posU, txtr_posV)
+        return txtr_posU, txtr_posV
+
     def _make_terrain(self, size, offset_vector: Vector3f):
         # index_buffer = (1, 6, 2, 7, 3, 8, 4, 9, 5, 10, 10, 6, 6, 11, 7, 12, 8, 13, 9, 14, 10, 15)
         # vertex_arr: list[list[float]] = [
@@ -146,61 +152,72 @@ class Scene(object):
         terrain_unit = const_var.TERRAIN_UNIT
         chunk = GameChunk(offset_vector, size)
 
-        chunk_len = chunk.numb_of_faces # Chunk length in faces
+        chunk_len = chunk.numb_of_faces  # Chunk length in faces
         row = 0
+        const_w = 32
+        const_h = 14
         count_of_indx_for_chunk = chunk_len * chunk_len - (chunk_len - 1)
-        upper_texture_index = [(0.0/32, 1.0/14), (1.0/32, 1.0/14)]
-        lower_texture_index = [(0.0/32, 0.0/14), (1.0/32, 0.0/14)]
+        lower_texture_index = ((0.0 / const_w, 1.0 / const_h), (1.0 / const_w, 1.0 / const_h))
+        upper_texture_index = ((0.0 / const_w, 0.0 / const_h), (1.0 / const_w, 0.0 / const_h))
         txt_index = 0
+
+        def create_vertex(_i, _j, cur_txtr: tuple, UV_pos: tuple):
+            _tmp_array: List[float] = [0] * 8
+            # Position
+            _tmp_array[0] = (terrain_unit * _j) + offset_vector.x
+            _tmp_array[1] = 0 + offset_vector.y
+            _tmp_array[2] = terrain_unit * _i + offset_vector.z
+            # Color
+            _tmp_array[3] = 1.0
+            _tmp_array[4] = 0.0
+            _tmp_array[5] = 1.0
+            # Texture coord
+            txtr_pos = self._set_txt_coord(cur_txtr[0], cur_txtr[1])
+            _tmp_array[6] = UV_pos[0] + txtr_pos[0]
+            _tmp_array[7] = UV_pos[1] + txtr_pos[1]
+            # chunk.vertex_array[j + row] += offset_vector
+            return _tmp_array
+
         _tmp_vertex_aray = list()
         for i in range(chunk_len):
             for j in range(chunk_len):
-                _tmp_array = [0] * 8
-                # Position
-                _tmp_array[0] = (terrain_unit * j) + offset_vector.x
-                _tmp_array[1] = 0 + offset_vector.y
-                _tmp_array[2] = terrain_unit * i + offset_vector.z
-                # Color
-                _tmp_array[3] = 1.0
-                _tmp_array[4] = 0.0
-                _tmp_array[5] = 1.0
-                # Texture coord
-                if i % 2 == 0:
-                    curent_text_coord = lower_texture_index[txt_index]
-                else:
-                    curent_text_coord = upper_texture_index[txt_index]
-                txt_index += 1
-                if txt_index >= 2:
-                    txt_index = 0
-                txtr_pos = self._set_txt_coord(14, 5)
-                _tmp_array[6] = curent_text_coord[0] + txtr_pos[0]
-                _tmp_array[7] = curent_text_coord[1] + txtr_pos[1]
-                # chunk.vertex_array[j + row] += offset_vector
-                _tmp_vertex_aray.append(_tmp_array)
-            txt_index = 0
+                #curr_txtr = (12, 5)
+                curr_txtr = (random.randrange(12, 15), 5)
+                _tmp_vertex_aray.append(create_vertex(i, j, curr_txtr, upper_texture_index[0]))
+                _tmp_vertex_aray.append(create_vertex(i, j - 1, curr_txtr, lower_texture_index[0]))
+                _tmp_vertex_aray.append(create_vertex(i + 1, j, curr_txtr, upper_texture_index[1]))
+                _tmp_vertex_aray.append(create_vertex(i + 1, j - 1, curr_txtr, lower_texture_index[1]))
             row += chunk_len
-        for i in range(count_of_indx_for_chunk)[1::]:
-            if i == 1:
-                chunk.index_array.append(0)
-            if i % chunk_len == 0:
-                #       Always will be one extra degenerate triangle
-                chunk.index_array.append(i + size)
-                chunk.index_array.append(i + size)
-                chunk.index_array.append(i)
-                chunk.index_array.append(i)
-            else:
-                chunk.index_array.append(i + size)
-                chunk.index_array.append(i)
+        for i in range(len(_tmp_vertex_aray))[0::4]:
+            chunk.index_array.append(i)
+            chunk.index_array.append(i + 1)
+            chunk.index_array.append(i + 2)
+
+            chunk.index_array.append(i + 1)
+            chunk.index_array.append(i + 2)
+            chunk.index_array.append(i + 3)
+            # if i == 1:
+            #     chunk.index_array.append(0)
+            # if i % (chunk_len * 2)  == 0:
+            #     #       Always will be one extra degenerate triangle
+            #     chunk.index_array.append(i )
+            #     chunk.index_array.append(i -1)
+            #     chunk.index_array.append(i)
+            #     # chunk.index_array.append(i)
+            # else:
+            #chunk.index_array.append(i)
+            #     chunk.index_array.append(i + size)
+            #     chunk.index_array.append(i)
         chunk.numb_of_triangles = len(chunk.index_array)
         chunk.vertex_array = np.array(_tmp_vertex_aray, dtype='f')
         self.chunks.append(chunk)  # Adding chunk to draw
 
     def draw_terrain(self, size):
         delta_time = time.time()
-        offset_vector: Vector3f = Vector3f()
+        offset_vector: Vector3f = Vector3f(0, 0, 0)
         #self._make_terrain(size, offset_vector)
-        DIST_X = 10
-        DIST_Y = 10
+        DIST_X = 15
+        DIST_Y = 15
         for i in range(DIST_Y):
             for j in range(DIST_X):
                 self._make_terrain(size, offset_vector)
@@ -209,4 +226,4 @@ class Scene(object):
             offset_vector.z = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.z
             offset_vector.x = self.chunks[0].chunk_position.x
         print("-Info: Terrain was created!")
-        print("Time spent for creating terrain ",  time.time() - delta_time)
+        print("Time spent for creating terrain ", time.time() - delta_time)

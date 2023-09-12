@@ -8,7 +8,7 @@ import numpy as np
 from typing import Union
 from typing import List
 
-from camera import Camera
+from camera import Camera3D
 from scene import Scene, Vector3f
 
 
@@ -16,7 +16,7 @@ class Render(object):
     _GAME_TIMER = 15  # Related to game FPS
     GAME_MODE = "3D"
 
-    def __init__(self, camera_obj: Camera, scene: Scene, upd_func):
+    def __init__(self, camera_obj: Camera3D, scene: Scene, upd_func):
         self._camera_obj = camera_obj
         self._game_scene = scene
         self._update_func = upd_func
@@ -194,16 +194,16 @@ class Render(object):
             glVertex3d(_pos_end.x, _pos_end.y, _pos_end.z)
         glEnd()
 
-    def _draw_terrain(self, line_mode: bool = 0):
+    def _draw_terrain(self, meshes, line_mode: bool = 0):
         texture = None
         self.load_textures(texture ,"test_number.jpg")
         #glBindTexture(GL_TEXTURE_2D, texture)
         #       Draw game terrain
-        for index, chunk in enumerate(self._game_scene.chunks):
+        for index, chunk in enumerate(meshes):
             start_index = 0
-            last_index = int(start_index + (chunk.numb_of_faces * chunk.numb_of_faces) * 2 - 1)
-            glBegin(GL_TRIANGLE_STRIP)
-            for i in chunk.index_array[start_index:last_index]:
+            #last_index = int(start_index + (chunk.numb_of_faces * chunk.numb_of_faces) * 2 - 1)
+            glBegin(GL_TRIANGLES)
+            for i in chunk.index_array:
                 try:
                     pos = Vector3f(chunk.vertex_array[i][0], chunk.vertex_array[i][1],
                                    chunk.vertex_array[i][2])
@@ -212,7 +212,7 @@ class Render(object):
                     text_coord = Vector3f(chunk.vertex_array[i][6], chunk.vertex_array[i][7],
                                      0)
                     glColor3f(color.x, color.y, color.z)
-                    glTexCoord2f(text_coord.x, text_coord.y);
+                    glTexCoord2f(text_coord.x, text_coord.y)
                     glVertex3d(pos.x, pos.y, pos.z)
 
                 except IndexError:
@@ -336,13 +336,13 @@ class Render(object):
         # glVertex3f(-1.0, 1.0, -1.0);
         # glEnd()
 
-    def _DrawTerrain_with_VAO(self):
+    def _DrawTerrain_with_VAO(self, meshes):
 
-        if not len(self._game_scene.chunks):
+        if not len(meshes):
             print("Error Chunk array is empty! ")
-        for chunk in self._game_scene.chunks:
+        for chunk in meshes:
             glBindVertexArray(chunk.VAO)
-            glDrawElements(GL_TRIANGLE_STRIP, len(chunk.index_array), GL_UNSIGNED_INT, None)
+            glDrawElements(GL_TRIANGLES, len(chunk.index_array), GL_UNSIGNED_INT, None)
             # glDrawArrays(GL_TRIANGLE_STRIP, 0, 6)
 
     def display(self):
@@ -353,17 +353,20 @@ class Render(object):
         self._make_camera(self._camera_obj.get_postion(), self._camera_obj.get_point_of_view())
         glScalef(1.0, 2.0, 1.0)
 
-        if 0:
+        if 1:
             glLineWidth(1)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
         else:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         if 1:
-            self._DrawTerrain_with_VAO()
+            self._DrawTerrain_with_VAO(self._game_scene.chunks)
         else:
             self.set_shaders(self.default_vertexShaderSource, self.default_fragmentShaderSource)
-            self._draw_terrain(0)
+            self._game_scene.chunks.append(self._camera_obj.player_mesh)
+            self._draw_terrain(self._game_scene.chunks)
 
+        #self._game_scene.chunks.append( self._camera_obj.player_mesh )
+        #self._draw_terrain( self._camera_obj.player_mesh )
         # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         # glColor3f(1.0, 0.0, 1.0)
         # glutSolidCube(0.05)
@@ -385,25 +388,21 @@ class Render(object):
         pass
 
     def Keyboard(self, key, x, y):
-        cam_angel = self._camera_obj.cam_angel
-        cam_angel_h = self._camera_obj.cam_angel_h
         rotate_angle = self._camera_obj.CAMERA_ANGEL
 
         if key == GLUT_KEY_UP:  # Клавиша вверх
-            self._camera_obj.move_forward(cam_angel)
+            self._camera_obj.move_forward()
         elif key == GLUT_KEY_DOWN:  # Клавиша вниз
-            self._camera_obj.move_back(cam_angel)
+            self._camera_obj.move_back()
         elif key == GLUT_KEY_LEFT:  # Клавиша влево
-            cam_angel -= rotate_angle
+            self._camera_obj.move_left()
         elif key == GLUT_KEY_RIGHT:  # Клавиша вправо
-            cam_angel += rotate_angle
+            self._camera_obj.move_right()
         elif key == GLUT_KEY_PAGE_UP:  # Клавиша вниз
-            cam_angel_h += rotate_angle
+            self._camera_obj.rotate_Y(rotate_angle)
         elif key == GLUT_KEY_HOME:  # Клавиша вниз Y
             self._camera_obj.move_up()
         elif key == GLUT_KEY_END:
             self._camera_obj.move_down()
         elif key == GLUT_KEY_PAGE_DOWN:  # Клавиша вниз
-            cam_angel_h -= rotate_angle  # math.cos(cam_angel * math.pi / 180) * CAMERA_SPEED
-        self._camera_obj.rotate(cam_angel, cam_angel_h)
-        # glutPostRedisplay()
+            self._camera_obj.rotate_Y(-rotate_angle)
