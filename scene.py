@@ -59,7 +59,7 @@ class Vector3f:
 
 
 class Mesh(object):
-    MAX_VERTEX_COUNT = 81
+    MAX_VERTEX_COUNT = 540
 
     def __init__(self):
         # One vertex = [ positionXYZ, ColorRGB, TexCoordUV ] - 8 variables * type float 4 byte - 32 bytes
@@ -100,6 +100,7 @@ class Scene(object):
 
         self.lines_aray = [Vector3f(0, 0, 0) for i in range(300)]
         self.chunks: GameChunk = []
+        self.models: list[Mesh] = []
     def draw_grid(self, grid_size=1) -> None:
         grid_size = const_var.GRID_UNIT
         num_lines = 40

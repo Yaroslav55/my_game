@@ -12,7 +12,7 @@ class Camera3D(object):
         self._pos_x = pos_x
         self._pos_y = pos_y
         self._pos_z = pos_z
-        self.player_mesh = Mesh()
+        self.player_mesh: Mesh
     def set_player_mesh(self, model : Mesh):
         self.player_mesh = model
     def move_forward(self, angle = CAMERA_ANGEL, speed=CAMERA_SPEED):

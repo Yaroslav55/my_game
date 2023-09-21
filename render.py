@@ -71,28 +71,28 @@ class Render(object):
     def run(self):
         self._opengl_init()
 
-    def _load_Chunks_in_VAO(self):
-        print(__name__, " run ")
+    def _load_Meshes_in_VAO(self, meshes):
         float_size = 4  # min size of element in one vertex
-        for cur_chunk in self._game_scene.chunks:
-            vertices = cur_chunk.vertex_array
-            indices = np.array((cur_chunk.index_array), dtype=np.int32)
+        from scene import Mesh
+        def load_mesh(mesh: Mesh):
+            vertices = mesh.vertex_array
+            indices = np.array((mesh.index_array), dtype=np.int32)
             # index_buffer = (1, 6, 2, 7, 3, 8, 4, 9, 5, 10, 10, 6, 6, 11, 7, 12, 8, 13, 9, 14, 10, 15)
             # vertex_arr: list[list[float]] = [
             #     [3, 5, 0], [4, 5, 0], [5, 5, 0], [6, 5, 0], [7, 5, 0],
             #     [3, 4, 0], [4, 4, 0], [5, 4, 0], [6, 4, 0], [7, 4, 0],
             #     [3, 3, 0], [4, 3, 0], [5, 3, 0], [6, 3, 0], [7, 3, 0]
             # ]
-            cur_chunk.VAO = glGenVertexArrays(1)
-            cur_chunk.VBO = glGenBuffers(1)
-            cur_chunk.EBO = glGenBuffers(1)
+            mesh.VAO = glGenVertexArrays(1)
+            mesh.VBO = glGenBuffers(1)
+            mesh.EBO = glGenBuffers(1)
             # bind the  Vertex Array Object first, then bind and set vertex  buffer(s), and then configure        vertex        attributes(s).
-            glBindVertexArray(cur_chunk.VAO)
+            glBindVertexArray(mesh.VAO)
             # Set vertices in VBO
-            glBindBuffer(GL_ARRAY_BUFFER, cur_chunk.VBO)
+            glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO)
             glBufferData(GL_ARRAY_BUFFER, vertices.size * float_size, vertices, GL_STATIC_DRAW)
             # Set vertex index
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cur_chunk.EBO)
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.EBO)
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, len(indices) * 4, indices, GL_STATIC_DRAW)
 
             # mPosition = glGetAttribLocation(self.shaderProgram, "aPos") # Or 0
@@ -106,7 +106,12 @@ class Render(object):
             glVertexAttribPointer(2, 2, GL_FLOAT, False, 8 * float_size, c_void_p(6 * float_size))
             glEnableVertexAttribArray(2)
             # load mesh textures
-            self.load_textures(cur_chunk.material, cur_chunk.texture_name)
+            self.load_textures(mesh.material, mesh.texture_name)
+        if isinstance(meshes, Mesh):            # IF var meshes is not list of Mesh
+            load_mesh(meshes)
+            return 1
+        for mesh in meshes:
+            load_mesh(mesh)
         return 0
 
     def set_shaders(self, vertexShader_source, fragmentShaderSource):
@@ -158,7 +163,8 @@ class Render(object):
         glutCreateWindow("Transformed Cube")
         # Old init func
         self.set_shaders(self.vertexShaderSource, self.fragmentShaderSource)
-        self._load_Chunks_in_VAO()
+        self._load_Meshes_in_VAO(self._game_scene.chunks)
+        self._load_Meshes_in_VAO(self._camera_obj.player_mesh)
         # print(float(glGetString(GL_VERSION)[:3]))
 
         # glShadeModel(GL_FLAT)
@@ -224,7 +230,7 @@ class Render(object):
         glViewport(0, 0, w, h)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        glFrustum(-0.5, 0.5, -1.0, 1.0, 1.5, 100.0)
+        glFrustum(-0.5, 0.5, -1.0, 1.0, 1.5, 6050.0)
         glMatrixMode(GL_MODELVIEW);
 
     def _make_camera(self, pos: Union[Vector3f, List[float]], look: Union[Vector3f, List[float]]):
@@ -261,7 +267,8 @@ class Render(object):
         glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
 
         glBindTexture(GL_TEXTURE_2D, texture_ptr)
-
+    def draw_mesh(self):
+        pass
     def drawCube(self):
         texture = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, texture)
@@ -336,14 +343,19 @@ class Render(object):
         # glVertex3f(-1.0, 1.0, -1.0);
         # glEnd()
 
-    def _DrawTerrain_with_VAO(self, meshes):
-
+    def _DrawMeshes_with_VAO(self, meshes):
+        def draw(VAO_obj):
+            glBindVertexArray(VAO_obj.VAO)
+            glDrawElements(GL_TRIANGLES, len(VAO_obj.index_array) , GL_UNSIGNED_INT, None)
+            # glDrawArrays(GL_TRIANGLE_STRIP, 0, 6)
+        from scene import Mesh
+        if isinstance(meshes, Mesh):            # IF var meshes is not list of Mesh
+            draw(meshes)
+            return 1
         if not len(meshes):
             print("Error Chunk array is empty! ")
-        for chunk in meshes:
-            glBindVertexArray(chunk.VAO)
-            glDrawElements(GL_TRIANGLES, len(chunk.index_array), GL_UNSIGNED_INT, None)
-            # glDrawArrays(GL_TRIANGLE_STRIP, 0, 6)
+        for mesh in meshes:
+            draw(mesh)
 
     def display(self):
         delta_time = time.time()
@@ -353,20 +365,19 @@ class Render(object):
         self._make_camera(self._camera_obj.get_postion(), self._camera_obj.get_point_of_view())
         glScalef(1.0, 2.0, 1.0)
 
-        if 1:
+        if 0:
             glLineWidth(1)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
         else:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         if 1:
-            self._DrawTerrain_with_VAO(self._game_scene.chunks)
+            self._DrawMeshes_with_VAO(self._game_scene.chunks)
         else:
             self.set_shaders(self.default_vertexShaderSource, self.default_fragmentShaderSource)
-            self._game_scene.chunks.append(self._camera_obj.player_mesh)
+            #self._game_scene.chunks.append(self._camera_obj.player_mesh)
             self._draw_terrain(self._game_scene.chunks)
+        self._DrawMeshes_with_VAO(self._camera_obj.player_mesh)
 
-        #self._game_scene.chunks.append( self._camera_obj.player_mesh )
-        #self._draw_terrain( self._camera_obj.player_mesh )
         # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         # glColor3f(1.0, 0.0, 1.0)
         # glutSolidCube(0.05)

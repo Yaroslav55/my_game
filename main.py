@@ -5,7 +5,7 @@ from camera import *
 from render import Render
 from model_loader import Loader
 
-GAME_MODE = "2D"
+GAME_MODE = "3D"
 RENDER_API = "Opengl"
 
 global renderer
@@ -18,16 +18,16 @@ def update():
 
 
 def game_init():
-    #pass
-    game_scene.draw_terrain(8)
-    #game_scene.draw_terrain(4)
+    pass
+    #game_scene.draw_terrain(8)
     # game_scene.draw_terrain(4)
-    #game_scene.draw_grid(0.5)
+    # game_scene.draw_terrain(4)
+    # game_scene.draw_grid(0.5)
 
 
 if __name__ == "__main__":
 
-    #game_camera = Camera(10.0, 10.0, 14.0, -90, -190)  # Class of main game camera
+    # game_camera = Camera(10.0, 10.0, 14.0, -90, -190)  # Class of main game camera
     model = Loader()
     game_scene = Scene()
     if GAME_MODE == "2D":
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     else:
         game_camera = Camera3D(10.0, 10.0, 14.0, -90, -90)  # Class of main game camera
 
-    game_camera.set_player_mesh( model.load_model("models/tinker.obj") )
+    game_camera.set_player_mesh(model.load_model("models/Minecraft_Tree.obj"))
     if RENDER_API == "Opengl":
         renderer = Render(game_camera, game_scene, update)
 
