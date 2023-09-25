@@ -5,7 +5,7 @@ from camera import *
 from render import Render
 from model_loader import Loader
 
-GAME_MODE = "3D"
+GAME_MODE = "2D"
 RENDER_API = "Opengl"
 
 global renderer
@@ -18,8 +18,9 @@ def update():
 
 
 def game_init():
-    pass
-    #game_scene.draw_terrain(8)
+    #pass
+    game_scene.draw_terrain(8)
+    game_scene.generate_vegetation(50)
     # game_scene.draw_terrain(4)
     # game_scene.draw_terrain(4)
     # game_scene.draw_grid(0.5)

@@ -106,7 +106,7 @@ class Render(object):
             glVertexAttribPointer(2, 2, GL_FLOAT, False, 8 * float_size, c_void_p(6 * float_size))
             glEnableVertexAttribArray(2)
             # load mesh textures
-            self.load_textures(mesh.material, mesh.texture_name)
+            mesh.material = self.load_textures(mesh.texture_name)
         if isinstance(meshes, Mesh):            # IF var meshes is not list of Mesh
             load_mesh(meshes)
             return 1
@@ -164,6 +164,8 @@ class Render(object):
         # Old init func
         self.set_shaders(self.vertexShaderSource, self.fragmentShaderSource)
         self._load_Meshes_in_VAO(self._game_scene.chunks)
+        self._load_Meshes_in_VAO(self._game_scene.models)
+
         self._load_Meshes_in_VAO(self._camera_obj.player_mesh)
         # print(float(glGetString(GL_VERSION)[:3]))
 
@@ -249,7 +251,7 @@ class Render(object):
             return -1
         return convert
 
-    def load_textures(self, texture_ptr, name):
+    def load_textures(self, name):
         texture_img = self._load_texture(name)
         if not texture_img:
             return -1
@@ -266,7 +268,8 @@ class Render(object):
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
         glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
 
-        glBindTexture(GL_TEXTURE_2D, texture_ptr)
+        #glBindTexture(GL_TEXTURE_2D, texture_ptr)
+        return texture_ptr
     def draw_mesh(self):
         pass
     def drawCube(self):
@@ -345,8 +348,9 @@ class Render(object):
 
     def _DrawMeshes_with_VAO(self, meshes):
         def draw(VAO_obj):
+            glBindTexture(GL_TEXTURE_2D, VAO_obj.material)
             glBindVertexArray(VAO_obj.VAO)
-            glDrawElements(GL_TRIANGLES, len(VAO_obj.index_array) , GL_UNSIGNED_INT, None)
+            glDrawElements(GL_TRIANGLES, len(VAO_obj.index_array), GL_UNSIGNED_INT, None)
             # glDrawArrays(GL_TRIANGLE_STRIP, 0, 6)
         from scene import Mesh
         if isinstance(meshes, Mesh):            # IF var meshes is not list of Mesh
@@ -364,7 +368,7 @@ class Render(object):
         glLoadIdentity()
         self._make_camera(self._camera_obj.get_postion(), self._camera_obj.get_point_of_view())
         glScalef(1.0, 2.0, 1.0)
-
+        glEnable(GL_DEPTH_TEST);
         if 0:
             glLineWidth(1)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
@@ -376,7 +380,9 @@ class Render(object):
             self.set_shaders(self.default_vertexShaderSource, self.default_fragmentShaderSource)
             #self._game_scene.chunks.append(self._camera_obj.player_mesh)
             self._draw_terrain(self._game_scene.chunks)
-        self._DrawMeshes_with_VAO(self._camera_obj.player_mesh)
+
+        self._DrawMeshes_with_VAO(self._game_scene.models)          # Draw game object
+        #self._DrawMeshes_with_VAO(self._camera_obj.player_mesh)
 
         # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         # glColor3f(1.0, 0.0, 1.0)

@@ -1,13 +1,15 @@
-from scene import Mesh
 from scene import Vector3f
 class Loader(object):
 
     def __init__(self):
         pass
 
-    def load_model(self, model_name):
+    def load_model(self, model_name, model_pos:Vector3f = Vector3f(0, 10, 0)):
+        from scene import Mesh
+
         scale = 0.05
-        obj_center_vec = Vector3f(0, 0, 0)
+        obj_center_vec = model_pos
+        #position = Vector3f(0, 0, 0)
         try:
             with open(model_name, 'r') as file:
                 lines = file.readlines()        # Read all data
@@ -16,6 +18,7 @@ class Loader(object):
                 #     print("Error obj format is invalid")
                 #     return -1
                 model_mesh = Mesh()
+                model_mesh.mesh_position = obj_center_vec
                 txtr__coord_array = []
                 iter_v = 0
                 for line in lines:
@@ -36,21 +39,19 @@ class Loader(object):
                         line.pop(0)
                         txtr__coord_array.append(line)
                     elif line[0] == 'f':
-                        line[1] = line[1].split('/')
-                        line[2] = line[2].split('/')
-                        line[3] = line[3].split('/')
-                        #line[4] = line[4].split('/')
-                        model_mesh.index_array.append( int(line[1][0]) -1)
-                        model_mesh.index_array.append( int(line[2][0]) -1)
-                        model_mesh.index_array.append( int(line[3][0]) -1)
-                        #model_mesh.index_array.append( int(line[4][0]) -1)
-                        # #       Tex coord
-                        # model_mesh.index_array.append( int(line[1][1]) )
-                        # model_mesh.index_array.append( int(line[2][1]) )
-                        # model_mesh.index_array.append( int(line[3][1]) )
-
+                        for element in line[1::]:
+                            element = element.split('/')
+                            element = list(map(int, element))           # Conver str list to int list
+                            model_mesh.index_array.append(int(element[0]) - 1)
+                            model_mesh.vertex_array[element[0] - 1][6] = txtr__coord_array[element[1] - 1][0]
+                            model_mesh.vertex_array[element[0] - 1][7] = txtr__coord_array[element[1] - 1][1]
+                    elif line[0] == 'vn':
+                        pass
                     elif line[1] == "#end":
                         print( "Model ", model_name, "was loaded" )
+                    else:
+                        print("Unknown start symbol ", line[0], "in", model_name)
+                model_mesh.texture_name = "models/LeavesTransparent.png"
                 return model_mesh
         except IOError:
             print("Error: could not open model " + model_name)

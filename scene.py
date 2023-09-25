@@ -65,6 +65,7 @@ class Mesh(object):
         # One vertex = [ positionXYZ, ColorRGB, TexCoordUV ] - 8 variables * type float 4 byte - 32 bytes
         self.vertex_array = np.empty((self.MAX_VERTEX_COUNT, 8), dtype='f')
         self.index_array = []
+        self.mesh_position: Vector3f = Vector3f(0, 0, 0)
         self.texture_name = "tiles/Basic_Buch_Tiles_Compiled.png"
         self.VAO = None
         self.VBO = None
@@ -80,7 +81,7 @@ class GameChunk(Mesh):
 
     def __init__(self, pos: Vector3f, size):
         Mesh.__init__(self)
-        self.chunk_position: Vector3f = Vector3f(pos.x, pos.y, pos.z)
+        self.mesh_position = Vector3f(pos.x, pos.y, pos.z)
         self.chunk_size = size
         self.numb_of_faces = size // const_var.TERRAIN_UNIT + 1
         self.numb_of_triangles = 0
@@ -213,18 +214,25 @@ class Scene(object):
         chunk.vertex_array = np.array(_tmp_vertex_aray, dtype='f')
         self.chunks.append(chunk)  # Adding chunk to draw
 
+    def generate_vegetation(self, amount):
+        from model_loader import Loader
+        loader = Loader()
+        for i in range(amount):
+            poss = Vector3f(random.randrange(0, 150), 10, random.randrange(0, 150))
+            model = loader.load_model("models/model.obj", poss)
+            self.models.append(model)
     def draw_terrain(self, size):
         delta_time = time.time()
         offset_vector: Vector3f = Vector3f(0, 0, 0)
         #self._make_terrain(size, offset_vector)
-        DIST_X = 15
-        DIST_Y = 15
+        DIST_X = 25
+        DIST_Y = 25
         for i in range(DIST_Y):
             for j in range(DIST_X):
                 self._make_terrain(size, offset_vector)
-                offset_vector.x = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.x
+                offset_vector.x = self.chunks[-1].chunk_size + self.chunks[-1].mesh_position.x
                 # print( "i and j: ", i, j )
-            offset_vector.z = self.chunks[-1].chunk_size + self.chunks[-1].chunk_position.z
-            offset_vector.x = self.chunks[0].chunk_position.x
+            offset_vector.z = self.chunks[-1].chunk_size + self.chunks[-1].mesh_position.z
+            offset_vector.x = self.chunks[0].mesh_position.x
         print("-Info: Terrain was created!")
         print("Time spent for creating terrain ", time.time() - delta_time)
