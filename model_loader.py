@@ -12,9 +12,9 @@ class Loader(object):
             with open(model_name, 'r') as file:
                 lines = file.readlines()        # Read all data
                 file.close()
-                if lines[0][0] != '#':
-                    print("Error obj format is invalid")
-                    return -1
+                # if lines[0][0] != '#':
+                #     print("Error obj format is invalid")
+                #     return -1
                 model_mesh = Mesh()
                 txtr__coord_array = []
                 iter_v = 0
@@ -34,17 +34,16 @@ class Loader(object):
                         iter_v += 1
                     elif line[0] == 'vt':
                         line.pop(0)
-                        line.pop(-1)
                         txtr__coord_array.append(line)
                     elif line[0] == 'f':
                         line[1] = line[1].split('/')
                         line[2] = line[2].split('/')
                         line[3] = line[3].split('/')
-                        line[4] = line[4].split('/')
+                        #line[4] = line[4].split('/')
                         model_mesh.index_array.append( int(line[1][0]) -1)
                         model_mesh.index_array.append( int(line[2][0]) -1)
                         model_mesh.index_array.append( int(line[3][0]) -1)
-                        model_mesh.index_array.append( int(line[4][0]) -1)
+                        #model_mesh.index_array.append( int(line[4][0]) -1)
                         # #       Tex coord
                         # model_mesh.index_array.append( int(line[1][1]) )
                         # model_mesh.index_array.append( int(line[2][1]) )

@@ -35,7 +35,7 @@ if __name__ == "__main__":
     else:
         game_camera = Camera3D(10.0, 10.0, 14.0, -90, -90)  # Class of main game camera
 
-    game_camera.set_player_mesh(model.load_model("models/Minecraft_Tree.obj"))
+    game_camera.set_player_mesh(model.load_model("models/model.obj"))
     if RENDER_API == "Opengl":
         renderer = Render(game_camera, game_scene, update)
 

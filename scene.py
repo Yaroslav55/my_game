@@ -59,7 +59,7 @@ class Vector3f:
 
 
 class Mesh(object):
-    MAX_VERTEX_COUNT = 540
+    MAX_VERTEX_COUNT = 2378
 
     def __init__(self):
         # One vertex = [ positionXYZ, ColorRGB, TexCoordUV ] - 8 variables * type float 4 byte - 32 bytes
