@@ -32,11 +32,11 @@ if __name__ == "__main__":
     model = Loader()
     game_scene = Scene()
     if GAME_MODE == "2D":
-        game_camera = Camera2D(16.0, 12.0, 77.0, 0, -190)  # Class of main game camera
+        game_camera = Camera2D(16.0, 25.0, 77.0, 0, -190)  # Class of main game camera
     else:
         game_camera = Camera3D(10.0, 10.0, 14.0, -90, -90)  # Class of main game camera
 
-    game_camera.set_player_mesh(model.load_model("models/model.obj"))
+    game_camera.set_player_mesh(model.load_model("models/tinker.obj", scale = 10))
     if RENDER_API == "Opengl":
         renderer = Render(game_camera, game_scene, update)
 

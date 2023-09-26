@@ -48,6 +48,7 @@ class Camera3D(object):
             self.cam_angel_h -= angle
 
     def get_postion(self) -> [float, float, float]:
+        self.player_mesh.directionOfMovement.set_variables(50, 250, 50)
         return [self._pos_x, self._pos_y, self._pos_z]
 
     def get_point_of_view(self) -> [float, float, float]:

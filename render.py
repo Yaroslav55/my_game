@@ -114,6 +114,24 @@ class Render(object):
             load_mesh(mesh)
         return 0
 
+    def update_vertex_in_VBO(self):
+        self.update_mesh_pos(self._camera_obj.player_mesh,
+                             self._camera_obj.player_mesh.directionOfMovement)
+        glBindBuffer(GL_ARRAY_BUFFER, self._camera_obj.player_mesh.VBO)
+        glBufferSubData(GL_ARRAY_BUFFER, 0, self._camera_obj.player_mesh.vertex_array.size * 4, self._camera_obj.player_mesh.vertex_array)
+    def update_mesh_pos(self, mesh, new_pos: Vector3f):
+        vector_of_length = Vector3f( new_pos.x - self._camera_obj.player_mesh.mesh_position.x,
+                                     new_pos.y - self._camera_obj.player_mesh.mesh_position.y,
+                                     new_pos.z - self._camera_obj.player_mesh.mesh_position.z)
+        # After movement was completed
+        if vector_of_length.y == 0:
+            print("[Info]", mesh.info["model_name"], "movement was completed")
+            return 0
+        for vertex in mesh.vertex_array:
+            vertex[0] += self._camera_obj.player_mesh.velocityOfMovement.x  # X
+            vertex[1] += self._camera_obj.player_mesh.velocityOfMovement.y  # Y
+            vertex[2] += self._camera_obj.player_mesh.velocityOfMovement.z  # Z
+        self._camera_obj.player_mesh.mesh_position += self._camera_obj.player_mesh.velocityOfMovement
     def set_shaders(self, vertexShader_source, fragmentShaderSource):
         def compileShader(type, shader_source):
             shader = glCreateShader(type)
@@ -241,6 +259,7 @@ class Render(object):
             gluLookAt(pos[0], pos[1], pos[2], look[0], look[1], look[2], 0.0, 1.0, 0.0)
         elif self.GAME_MODE == "2D":
             pass
+        self._DrawMeshes_with_VAO(self._camera_obj.player_mesh)
 
     def _load_texture(self, texture_name) -> Image:
         try:
@@ -368,7 +387,7 @@ class Render(object):
         glLoadIdentity()
         self._make_camera(self._camera_obj.get_postion(), self._camera_obj.get_point_of_view())
         glScalef(1.0, 2.0, 1.0)
-        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_DEPTH_TEST)
         if 0:
             glLineWidth(1)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
@@ -380,9 +399,8 @@ class Render(object):
             self.set_shaders(self.default_vertexShaderSource, self.default_fragmentShaderSource)
             #self._game_scene.chunks.append(self._camera_obj.player_mesh)
             self._draw_terrain(self._game_scene.chunks)
-
+        self.update_vertex_in_VBO()
         self._DrawMeshes_with_VAO(self._game_scene.models)          # Draw game object
-        #self._DrawMeshes_with_VAO(self._camera_obj.player_mesh)
 
         # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         # glColor3f(1.0, 0.0, 1.0)

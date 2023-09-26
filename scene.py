@@ -62,10 +62,13 @@ class Mesh(object):
     MAX_VERTEX_COUNT = 2378
 
     def __init__(self):
+        self.info = {"type": "model", "model_name": ""}
         # One vertex = [ positionXYZ, ColorRGB, TexCoordUV ] - 8 variables * type float 4 byte - 32 bytes
         self.vertex_array = np.empty((self.MAX_VERTEX_COUNT, 8), dtype='f')
         self.index_array = []
         self.mesh_position: Vector3f = Vector3f(0, 0, 0)
+        self.directionOfMovement:Vector3f = Vector3f(0, 0,0)
+        self.velocityOfMovement:Vector3f = Vector3f(0.5, 0.5,0.5)
         self.texture_name = "tiles/Basic_Buch_Tiles_Compiled.png"
         self.VAO = None
         self.VBO = None
@@ -219,7 +222,7 @@ class Scene(object):
         loader = Loader()
         for i in range(amount):
             poss = Vector3f(random.randrange(0, 150), 10, random.randrange(0, 150))
-            model = loader.load_model("models/model.obj", poss)
+            model = loader.load_model("models/model.obj", poss, 0.01)
             self.models.append(model)
     def draw_terrain(self, size):
         delta_time = time.time()

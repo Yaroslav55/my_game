@@ -4,10 +4,10 @@ class Loader(object):
     def __init__(self):
         pass
 
-    def load_model(self, model_name, model_pos:Vector3f = Vector3f(0, 10, 0)):
+    def load_model(self, model_name, model_pos:Vector3f = Vector3f(0, 10, 0), scale = 1):
         from scene import Mesh
 
-        scale = 0.05
+        #scale = 0.01
         obj_center_vec = model_pos
         #position = Vector3f(0, 0, 0)
         try:
@@ -19,6 +19,7 @@ class Loader(object):
                 #     return -1
                 model_mesh = Mesh()
                 model_mesh.mesh_position = obj_center_vec
+                model_mesh.info["model_name"] = model_name
                 txtr__coord_array = []
                 iter_v = 0
                 for line in lines:
@@ -28,7 +29,8 @@ class Loader(object):
                     line = line.replace('\n', '')
                     line = line.split(' ')
                     if line[0] == 'v':
-                        obj_vec = Vector3f(  (obj_center_vec.x - float(line[1])) * scale,
+                        # Vector of length
+                        obj_vec = Vector3f( (obj_center_vec.x - float(line[1])) * scale,
                                             (obj_center_vec.y + float(line[2])) * scale,
                                             (obj_center_vec.z - float(line[3])) * scale)
                         model_mesh.vertex_array[iter_v][0] = obj_center_vec.x + obj_vec.x     # X
@@ -43,8 +45,9 @@ class Loader(object):
                             element = element.split('/')
                             element = list(map(int, element))           # Conver str list to int list
                             model_mesh.index_array.append(int(element[0]) - 1)
-                            model_mesh.vertex_array[element[0] - 1][6] = txtr__coord_array[element[1] - 1][0]
-                            model_mesh.vertex_array[element[0] - 1][7] = txtr__coord_array[element[1] - 1][1]
+                            if txtr__coord_array:       # If txtr coord exist in model file
+                                model_mesh.vertex_array[element[0] - 1][6] = txtr__coord_array[element[1] - 1][0]
+                                model_mesh.vertex_array[element[0] - 1][7] = txtr__coord_array[element[1] - 1][1]
                     elif line[0] == 'vn':
                         pass
                     elif line[1] == "#end":
