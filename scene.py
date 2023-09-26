@@ -20,7 +20,11 @@ class Vector3f:
 
     def set_zero(self):
         self.set_variables(0.0, 0.0, 0.0)
-
+    def is_empty(self):
+        if (self.x == 0) and (self.y == 0) and (self.z == 0):
+            return True
+        else:
+            return False
     def set(self, coord: List[List[int]]):
         self.x = coord[0]
         self.y = coord[1]
@@ -67,8 +71,8 @@ class Mesh(object):
         self.vertex_array = np.empty((self.MAX_VERTEX_COUNT, 8), dtype='f')
         self.index_array = []
         self.mesh_position: Vector3f = Vector3f(0, 0, 0)
-        self.directionOfMovement:Vector3f = Vector3f(0, 0,0)
-        self.velocityOfMovement:Vector3f = Vector3f(0.5, 0.5,0.5)
+        self.directionOfMovement:Vector3f = Vector3f(0, 0, 0)
+        self.velocityOfMovement:Vector3f = Vector3f(0.1, 0.1,0.1)
         self.texture_name = "tiles/Basic_Buch_Tiles_Compiled.png"
         self.VAO = None
         self.VBO = None

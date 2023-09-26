@@ -22,7 +22,8 @@ class Camera3D(object):
     def move_back(self, angle = CAMERA_ANGEL, speed=CAMERA_SPEED):
         self._pos_x -= math.cos(self.cam_angel * math.pi / 180) * speed
         self._pos_z -= math.sin(self.cam_angel * math.pi / 180) * speed
-
+        self.player_mesh.directionOfMovement.x = 15
+        self.player_mesh.directionOfMovement.y = 40
     def move_up(self, speed=CAMERA_SPEED):
         self._pos_y += speed
 
@@ -48,7 +49,6 @@ class Camera3D(object):
             self.cam_angel_h -= angle
 
     def get_postion(self) -> [float, float, float]:
-        self.player_mesh.directionOfMovement.set_variables(50, 250, 50)
         return [self._pos_x, self._pos_y, self._pos_z]
 
     def get_point_of_view(self) -> [float, float, float]:

@@ -1,3 +1,5 @@
+import math
+
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
@@ -115,23 +117,42 @@ class Render(object):
         return 0
 
     def update_vertex_in_VBO(self):
-        self.update_mesh_pos(self._camera_obj.player_mesh,
-                             self._camera_obj.player_mesh.directionOfMovement)
-        glBindBuffer(GL_ARRAY_BUFFER, self._camera_obj.player_mesh.VBO)
-        glBufferSubData(GL_ARRAY_BUFFER, 0, self._camera_obj.player_mesh.vertex_array.size * 4, self._camera_obj.player_mesh.vertex_array)
+            self.update_mesh_pos(self._camera_obj.player_mesh,
+                                 self._camera_obj.player_mesh.directionOfMovement)
+            glBindBuffer(GL_ARRAY_BUFFER, self._camera_obj.player_mesh.VBO)
+            glBufferSubData(GL_ARRAY_BUFFER, 0, self._camera_obj.player_mesh.vertex_array.size * 4, self._camera_obj.player_mesh.vertex_array)
     def update_mesh_pos(self, mesh, new_pos: Vector3f):
-        vector_of_length = Vector3f( new_pos.x - self._camera_obj.player_mesh.mesh_position.x,
-                                     new_pos.y - self._camera_obj.player_mesh.mesh_position.y,
-                                     new_pos.z - self._camera_obj.player_mesh.mesh_position.z)
-        # After movement was completed
-        if vector_of_length.y == 0:
-            print("[Info]", mesh.info["model_name"], "movement was completed")
-            return 0
-        for vertex in mesh.vertex_array:
-            vertex[0] += self._camera_obj.player_mesh.velocityOfMovement.x  # X
-            vertex[1] += self._camera_obj.player_mesh.velocityOfMovement.y  # Y
-            vertex[2] += self._camera_obj.player_mesh.velocityOfMovement.z  # Z
-        self._camera_obj.player_mesh.mesh_position += self._camera_obj.player_mesh.velocityOfMovement
+        vector_of_length = Vector3f( mesh.directionOfMovement.x - mesh.mesh_position.x,
+                                     mesh.directionOfMovement.y - mesh.mesh_position.y,
+                                     mesh.directionOfMovement.z - mesh.mesh_position.z)
+        def get_cos( pos:Vector3f, direction:Vector3f):
+            #B = Vector3f(0, -1, 2)
+            #C = Vector3f(3, -4, 5)
+            AB = Vector3f(direction.x - pos.x, direction.y - pos.y, direction.z - pos.z)
+            AC = Vector3f(pos.x, pos.y, pos.z)
+            AC.x = 50
+            scalar = AB.x * AC.x + AB.y * AC.y + AB.z * AC.z
+            vector_modulus = math.sqrt( math.pow( AB.x, 2) + math.pow( AB.y, 2 ) + math.pow( AB.z, 2 ))
+            AC_modeulus = math.sqrt( math.pow( AC.x, 2 ) + math.pow( AC.y, 2 ) + math.pow( AC.z, 2 ))
+
+            cos_alpha = scalar / ( vector_modulus * AC_modeulus )
+            print("AB.y: ", AB.y)
+            print("AB.x: ", AB.y)
+            return cos_alpha
+        if not vector_of_length.is_empty():
+            if vector_of_length.x >= 1 and vector_of_length.y >= 1:
+                cos_alpha = get_cos(mesh.mesh_position, mesh.directionOfMovement)
+                sin_alpha = math.sqrt(1 - math.pow(cos_alpha, 2))
+                # After movement was completed
+                # if vector_of_length.y <= 1:
+                #     print("[Info]", mesh.info["model_name"], "movement was completed")
+                #     return 0
+                for vertex in mesh.vertex_array:
+                    vertex[0] += cos_alpha/2  # X
+                    vertex[1] += sin_alpha/2  # Y
+                    #vertex[2] += self._camera_obj.player_mesh.velocityOfMovement.z  # Z
+                mesh.mesh_position.x += cos_alpha/2
+                mesh.mesh_position.y += sin_alpha/2
     def set_shaders(self, vertexShader_source, fragmentShaderSource):
         def compileShader(type, shader_source):
             shader = glCreateShader(type)
@@ -376,7 +397,8 @@ class Render(object):
             draw(meshes)
             return 1
         if not len(meshes):
-            print("Error Chunk array is empty! ")
+            return -1
+            #print("Error Chunk array is empty! ")
         for mesh in meshes:
             draw(mesh)
 
@@ -400,7 +422,7 @@ class Render(object):
             #self._game_scene.chunks.append(self._camera_obj.player_mesh)
             self._draw_terrain(self._game_scene.chunks)
         self.update_vertex_in_VBO()
-        self._DrawMeshes_with_VAO(self._game_scene.models)          # Draw game object
+        #self._DrawMeshes_with_VAO(self._game_scene.models)          # Draw game object
 
         # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         # glColor3f(1.0, 0.0, 1.0)

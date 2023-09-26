@@ -4,7 +4,7 @@ class Loader(object):
     def __init__(self):
         pass
 
-    def load_model(self, model_name, model_pos:Vector3f = Vector3f(0, 10, 0), scale = 1):
+    def load_model(self, model_name, model_pos:Vector3f = Vector3f(0, 18, 0), scale = 0.5):
         from scene import Mesh
 
         #scale = 0.01
@@ -19,6 +19,7 @@ class Loader(object):
                 #     return -1
                 model_mesh = Mesh()
                 model_mesh.mesh_position = obj_center_vec
+                model_mesh.directionOfMovement.set_variables( obj_center_vec.x, obj_center_vec.y, obj_center_vec.z)
                 model_mesh.info["model_name"] = model_name
                 txtr__coord_array = []
                 iter_v = 0
