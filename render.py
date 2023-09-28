@@ -109,50 +109,50 @@ class Render(object):
             glEnableVertexAttribArray(2)
             # load mesh textures
             mesh.material = self.load_textures(mesh.texture_name)
-        if isinstance(meshes, Mesh):            # IF var meshes is not list of Mesh
+
+        if isinstance(meshes, Mesh):  # IF var meshes is not list of Mesh
             load_mesh(meshes)
             return 1
         for mesh in meshes:
             load_mesh(mesh)
         return 0
 
-    def update_vertex_in_VBO(self):
+    def update_vertex_in_VBO(self, mesh):
+        if not (mesh.mesh_position == mesh.directionOfMovement):
             self.update_mesh_pos(self._camera_obj.player_mesh,
                                  self._camera_obj.player_mesh.directionOfMovement)
             glBindBuffer(GL_ARRAY_BUFFER, self._camera_obj.player_mesh.VBO)
-            glBufferSubData(GL_ARRAY_BUFFER, 0, self._camera_obj.player_mesh.vertex_array.size * 4, self._camera_obj.player_mesh.vertex_array)
-    def update_mesh_pos(self, mesh, new_pos: Vector3f):
-        vector_of_length = Vector3f( mesh.directionOfMovement.x - mesh.mesh_position.x,
-                                     mesh.directionOfMovement.y - mesh.mesh_position.y,
-                                     mesh.directionOfMovement.z - mesh.mesh_position.z)
-        def get_cos( pos:Vector3f, direction:Vector3f):
-            #B = Vector3f(0, -1, 2)
-            #C = Vector3f(3, -4, 5)
-            AB = Vector3f(direction.x - pos.x, direction.y - pos.y, direction.z - pos.z)
-            AC = Vector3f(pos.x, pos.y, pos.z)
-            AC.x = 50
-            scalar = AB.x * AC.x + AB.y * AC.y + AB.z * AC.z
-            vector_modulus = math.sqrt( math.pow( AB.x, 2) + math.pow( AB.y, 2 ) + math.pow( AB.z, 2 ))
-            AC_modeulus = math.sqrt( math.pow( AC.x, 2 ) + math.pow( AC.y, 2 ) + math.pow( AC.z, 2 ))
+            glBufferSubData(GL_ARRAY_BUFFER, 0, self._camera_obj.player_mesh.vertex_array.size * 4,
+                            self._camera_obj.player_mesh.vertex_array)
 
-            cos_alpha = scalar / ( vector_modulus * AC_modeulus )
-            print("AB.y: ", AB.y)
-            print("AB.x: ", AB.y)
-            return cos_alpha
-        if not vector_of_length.is_empty():
-            if vector_of_length.x >= 1 and vector_of_length.y >= 1:
-                cos_alpha = get_cos(mesh.mesh_position, mesh.directionOfMovement)
-                sin_alpha = math.sqrt(1 - math.pow(cos_alpha, 2))
-                # After movement was completed
-                # if vector_of_length.y <= 1:
-                #     print("[Info]", mesh.info["model_name"], "movement was completed")
-                #     return 0
-                for vertex in mesh.vertex_array:
-                    vertex[0] += cos_alpha/2  # X
-                    vertex[1] += sin_alpha/2  # Y
-                    #vertex[2] += self._camera_obj.player_mesh.velocityOfMovement.z  # Z
-                mesh.mesh_position.x += cos_alpha/2
-                mesh.mesh_position.y += sin_alpha/2
+    def update_mesh_pos(self, mesh, new_pos: Vector3f):
+        vector_sum = Vector3f(new_pos.x - mesh.mesh_position.x,
+                              new_pos.y - mesh.mesh_position.y,
+                              new_pos.z - mesh.mesh_position.z)
+
+        vec_len = math.sqrt(math.pow(vector_sum.x, 2) +
+                            math.pow(vector_sum.y, 2) +
+                            math.pow(vector_sum.z, 2))
+
+        if vec_len <= 1:
+            print("[Info]", mesh.info["model_name"], "movement was completed")
+            mesh.directionOfMovement.set_variables(mesh.mesh_position.x,
+                                                   mesh.mesh_position.y,
+                                                   mesh.mesh_position.z)
+            return -1
+        step = 1  # distance by one step
+        step_x = vector_sum.x / (vec_len / step)
+        step_y = vector_sum.y / (vec_len / step)
+        step_z = vector_sum.z / (vec_len / step)
+        #print(vec_len)
+        for vertex in mesh.vertex_array:
+            vertex[0] += step_x  # X
+            vertex[1] += step_y  # Y
+            vertex[2] += step_z  # Z
+        mesh.mesh_position.x += step_x
+        mesh.mesh_position.y += step_y
+        mesh.mesh_position.z += step_z
+
     def set_shaders(self, vertexShader_source, fragmentShaderSource):
         def compileShader(type, shader_source):
             shader = glCreateShader(type)
@@ -192,8 +192,8 @@ class Render(object):
 
     def _opengl_init(self):
         glutInitContextVersion(3, 1)
-        #glutInitContextFlags(GLUT_FORWARD_COMPATIBLE)
-        #glutInitContextProfile(GLUT_CORE_PROFILE)
+        # glutInitContextFlags(GLUT_FORWARD_COMPATIBLE)
+        # glutInitContextProfile(GLUT_CORE_PROFILE)
 
         glutInit(sys.argv)
         glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB)
@@ -243,12 +243,12 @@ class Render(object):
 
     def _draw_terrain(self, meshes, line_mode: bool = 0):
         texture = None
-        self.load_textures(texture ,"test_number.jpg")
-        #glBindTexture(GL_TEXTURE_2D, texture)
+        self.load_textures(texture, "test_number.jpg")
+        # glBindTexture(GL_TEXTURE_2D, texture)
         #       Draw game terrain
         for index, chunk in enumerate(meshes):
             start_index = 0
-            #last_index = int(start_index + (chunk.numb_of_faces * chunk.numb_of_faces) * 2 - 1)
+            # last_index = int(start_index + (chunk.numb_of_faces * chunk.numb_of_faces) * 2 - 1)
             glBegin(GL_TRIANGLES)
             for i in chunk.index_array:
                 try:
@@ -257,7 +257,7 @@ class Render(object):
                     color = Vector3f(chunk.vertex_array[i][3], chunk.vertex_array[i][4],
                                      chunk.vertex_array[i][5])
                     text_coord = Vector3f(chunk.vertex_array[i][6], chunk.vertex_array[i][7],
-                                     0)
+                                          0)
                     glColor3f(color.x, color.y, color.z)
                     glTexCoord2f(text_coord.x, text_coord.y)
                     glVertex3d(pos.x, pos.y, pos.z)
@@ -308,10 +308,12 @@ class Render(object):
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
         glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
 
-        #glBindTexture(GL_TEXTURE_2D, texture_ptr)
+        # glBindTexture(GL_TEXTURE_2D, texture_ptr)
         return texture_ptr
+
     def draw_mesh(self):
         pass
+
     def drawCube(self):
         texture = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, texture)
@@ -392,13 +394,14 @@ class Render(object):
             glBindVertexArray(VAO_obj.VAO)
             glDrawElements(GL_TRIANGLES, len(VAO_obj.index_array), GL_UNSIGNED_INT, None)
             # glDrawArrays(GL_TRIANGLE_STRIP, 0, 6)
+
         from scene import Mesh
-        if isinstance(meshes, Mesh):            # IF var meshes is not list of Mesh
+        if isinstance(meshes, Mesh):  # IF var meshes is not list of Mesh
             draw(meshes)
             return 1
         if not len(meshes):
             return -1
-            #print("Error Chunk array is empty! ")
+            # print("Error Chunk array is empty! ")
         for mesh in meshes:
             draw(mesh)
 
@@ -419,17 +422,17 @@ class Render(object):
             self._DrawMeshes_with_VAO(self._game_scene.chunks)
         else:
             self.set_shaders(self.default_vertexShaderSource, self.default_fragmentShaderSource)
-            #self._game_scene.chunks.append(self._camera_obj.player_mesh)
+            # self._game_scene.chunks.append(self._camera_obj.player_mesh)
             self._draw_terrain(self._game_scene.chunks)
-        self.update_vertex_in_VBO()
-        #self._DrawMeshes_with_VAO(self._game_scene.models)          # Draw game object
+        self.update_vertex_in_VBO(self._camera_obj.player_mesh)
+        # self._DrawMeshes_with_VAO(self._game_scene.models)          # Draw game object
 
         # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         # glColor3f(1.0, 0.0, 1.0)
         # glutSolidCube(0.05)
         glFlush()
         delta_time = time.time() - delta_time  # The more the worse
-        #print("Delta time: ", delta_time)
+        # print("Delta time: ", delta_time)
 
     def opengl_error_check(self):
         error = glGetError()

@@ -20,11 +20,13 @@ class Vector3f:
 
     def set_zero(self):
         self.set_variables(0.0, 0.0, 0.0)
+
     def is_empty(self):
         if (self.x == 0) and (self.y == 0) and (self.z == 0):
             return True
         else:
             return False
+
     def set(self, coord: List[List[int]]):
         self.x = coord[0]
         self.y = coord[1]
@@ -55,6 +57,15 @@ class Vector3f:
         else:
             print("Error Vector3F incorrect index: ", index)
 
+    # Overload "==" operator
+    def __eq__(self, arg_2) -> bool:
+        if isinstance(arg_2, self.__class__):
+            if self.x == arg_2.x:
+                if self.y == arg_2.y:
+                    if self.z == arg_2.z:
+                        return True
+        return False
+
     def __add__(self, value):
         if isinstance(value, __class__):
             return self.__class__(self.x + value.x, self.y + value.y, self.z + value.z)
@@ -71,8 +82,8 @@ class Mesh(object):
         self.vertex_array = np.empty((self.MAX_VERTEX_COUNT, 8), dtype='f')
         self.index_array = []
         self.mesh_position: Vector3f = Vector3f(0, 0, 0)
-        self.directionOfMovement:Vector3f = Vector3f(0, 0, 0)
-        self.velocityOfMovement:Vector3f = Vector3f(0.1, 0.1,0.1)
+        self.directionOfMovement: Vector3f = Vector3f(0, 0, 0)
+        self.velocityOfMovement: Vector3f = Vector3f(0.1, 0.1, 0.1)
         self.texture_name = "tiles/Basic_Buch_Tiles_Compiled.png"
         self.VAO = None
         self.VBO = None
@@ -109,6 +120,7 @@ class Scene(object):
         self.lines_aray = [Vector3f(0, 0, 0) for i in range(300)]
         self.chunks: GameChunk = []
         self.models: list[Mesh] = []
+
     def draw_grid(self, grid_size=1) -> None:
         grid_size = const_var.GRID_UNIT
         num_lines = 40
@@ -190,7 +202,7 @@ class Scene(object):
         _tmp_vertex_aray = list()
         for i in range(chunk_len):
             for j in range(chunk_len):
-                #curr_txtr = (12, 5)
+                # curr_txtr = (12, 5)
                 curr_txtr = (random.randrange(12, 15), 5)
                 _tmp_vertex_aray.append(create_vertex(i, j, curr_txtr, upper_texture_index[0]))
                 _tmp_vertex_aray.append(create_vertex(i, j - 1, curr_txtr, lower_texture_index[0]))
@@ -214,7 +226,7 @@ class Scene(object):
             #     chunk.index_array.append(i)
             #     # chunk.index_array.append(i)
             # else:
-            #chunk.index_array.append(i)
+            # chunk.index_array.append(i)
             #     chunk.index_array.append(i + size)
             #     chunk.index_array.append(i)
         chunk.numb_of_triangles = len(chunk.index_array)
@@ -228,10 +240,11 @@ class Scene(object):
             poss = Vector3f(random.randrange(0, 150), 10, random.randrange(0, 150))
             model = loader.load_model("models/model.obj", poss, 0.01)
             self.models.append(model)
+
     def draw_terrain(self, size):
         delta_time = time.time()
         offset_vector: Vector3f = Vector3f(0, 0, 0)
-        #self._make_terrain(size, offset_vector)
+        # self._make_terrain(size, offset_vector)
         DIST_X = 25
         DIST_Y = 25
         for i in range(DIST_Y):
