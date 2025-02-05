@@ -199,7 +199,7 @@ class Render(object):
         glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB)
         glutInitWindowSize(800, 800)
         glutInitWindowPosition(100, 100)
-        glutCreateWindow("Transformed Cube")
+        glutCreateWindow(b"Transformed Cube")
         # Old init func
         self.set_shaders(self.vertexShaderSource, self.fragmentShaderSource)
         self._load_Meshes_in_VAO(self._game_scene.chunks)
