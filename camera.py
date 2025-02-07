@@ -22,8 +22,7 @@ class Camera3D(object):
     def move_back(self, angle = CAMERA_ANGEL, speed=CAMERA_SPEED):
         self._pos_x -= math.cos(self.cam_angel * math.pi / 180) * speed
         self._pos_z -= math.sin(self.cam_angel * math.pi / 180) * speed
-        self.player_mesh.directionOfMovement.set_variables(self._pos_x, self._pos_y, self._pos_z)
-        self.player_mesh.directionOfMovement.z += 30
+
     def move_up(self, speed=CAMERA_SPEED):
         self._pos_y += speed
 
