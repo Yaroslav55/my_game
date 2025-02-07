@@ -1,0 +1,36 @@
+fail_fast: true
+
+default_install_hook_types: [pre-commit, commit-msg, post-checkout, post-merge, post-rewrite, pre-push]
+default_stages: [pre-commit]
+
+repos:
+-   repo: https://github.com/commitizen-tools/commitizen
+    rev: c6119812f7c21e6b2b01583025e2664945c550a3  # frozen: v4.1.1
+    hooks:
+      - id: commitizen
+        entry: uv run cz check --allowed-prefixes 'feature'
+        stages: [commit-msg]
+-   repo: https://github.com/abravalheri/validate-pyproject
+    rev: f45606bad11ad90ddac1212fa83ebe2a4d724351  # frozen: v0.23
+    hooks:
+      - id: validate-pyproject
+-   repo: https://github.com/astral-sh/uv-pre-commit
+    # uv version.
+    rev: 2d6da37da5d672c1e59c3db790c139dc0e183629  # frozen: 0.5.27
+    hooks:
+      - id: uv-lock
+      - id: uv-sync
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: cef0300fd0fc4d2a87a85fa2093c6b283ea36f4b  # frozen: v5.0.0
+    hooks:
+    -   id: check-docstring-first
+        stages: [pre-commit]
+    -   id: end-of-file-fixer
+        stages: [pre-commit]
+    -   id: trailing-whitespace
+        stages: [pre-commit]
+-   repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: 871f3bcae4fe473cd7109c3a068db975dc035e3b  # frozen: v0.9.4
+    hooks:
+      - id: ruff
+        args: ["--fix"]
