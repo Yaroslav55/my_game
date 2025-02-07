@@ -1,4 +1,3 @@
-import math
 import random
 import time
 
@@ -243,7 +242,7 @@ class Scene(object):
 
     def draw_terrain(self, size):
         delta_time = time.time()
-        offset_vector: Vector3f = Vector3f(0, 0, 0)
+        offset_vector: Vector3f = Vector3f(70, 0, 40)
         # self._make_terrain(size, offset_vector)
         DIST_X = 25
         DIST_Y = 25
