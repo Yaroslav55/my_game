@@ -14,7 +14,7 @@ from camera import Camera3D
 from scene import Scene, Vector3f
 
 
-class Render(object):
+class OpenGLRender(object):
     _GAME_TIMER = 15  # Related to game FPS
     GAME_MODE = "3D"
 
@@ -272,7 +272,7 @@ class Render(object):
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         glFrustum(-0.5, 0.5, -1.0, 1.0, 1.5, 6050.0)
-        glMatrixMode(GL_MODELVIEW);
+        glMatrixMode(GL_MODELVIEW)
 
     def _make_camera(self, pos: Union[Vector3f, List[float]], look: Union[Vector3f, List[float]]):
 
