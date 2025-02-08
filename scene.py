@@ -3,6 +3,8 @@ import time
 
 import const_variables_store as const_var
 from typing import List
+
+
 import numpy as np
 
 
@@ -31,10 +33,6 @@ class Vector3f:
         self.y = coord[1]
         self.z = coord[2]
 
-    def set(self, coord: None):
-        self.x = coord.x
-        self.y = coord.y
-        self.z = coord.z
 
     def __setitem__(self, index, value):
         if index == 0:
@@ -47,14 +45,20 @@ class Vector3f:
             print("Error Vector3F incorrect index: ", index)
 
     def __getitem__(self, index):
-        if index == 0:
-            return self.x
-        elif index == 1:
-            return self.y
-        elif index == 2:
-            return self.z
-        else:
-            print("Error Vector3F incorrect index: ", index)
+        return self.x
+
+    def __iter__(self):
+        return iter( [self.x, self.y, self.z] )
+
+    def __len__(self):
+        return 1
+
+    def __imul__(self, value: float):
+        """In-place multiplication: multiply each element of the list by 'other'."""
+        self.x *= value
+        self.y *= value
+        self.z *= value
+        return self
 
     # Overload "==" operator
     def __eq__(self, arg_2) -> bool:
@@ -73,7 +77,7 @@ class Vector3f:
 
 
 class Mesh(object):
-    MAX_VERTEX_COUNT = 2378
+    MAX_VERTEX_COUNT = 8
 
     def __init__(self):
         self.info = {"type": "model", "model_name": ""}
@@ -154,12 +158,13 @@ class Scene(object):
 
     def _set_txt_coord(self, posX, posY):
         tile_w = 512
-        tile_h = 224
+        tile_h = 122
         txt_size = 16
         unit_X = 1 / (tile_w / txt_size)
         unit_Y = 1 / (tile_h / txt_size)
         txtr_posU = unit_X * posX
         txtr_posV = unit_Y * posY
+
         return txtr_posU, txtr_posV
 
     def _make_terrain(self, size, offset_vector: Vector3f):
@@ -176,10 +181,8 @@ class Scene(object):
         row = 0
         const_w = 32
         const_h = 14
-        count_of_indx_for_chunk = chunk_len * chunk_len - (chunk_len - 1)
         lower_texture_index = ((0.0 / const_w, 1.0 / const_h), (1.0 / const_w, 1.0 / const_h))
         upper_texture_index = ((0.0 / const_w, 0.0 / const_h), (1.0 / const_w, 0.0 / const_h))
-        txt_index = 0
 
         def create_vertex(_i, _j, cur_txtr: tuple, UV_pos: tuple):
             _tmp_array: List[float] = [0] * 8
@@ -201,8 +204,9 @@ class Scene(object):
         _tmp_vertex_aray = list()
         for i in range(chunk_len):
             for j in range(chunk_len):
-                # curr_txtr = (12, 5)
-                curr_txtr = (random.randrange(12, 15), 5)
+                curr_txtr = (12, 5)
+                # curr_txtr = (random.randrange(12, 15), 5)
+
                 _tmp_vertex_aray.append(create_vertex(i, j, curr_txtr, upper_texture_index[0]))
                 _tmp_vertex_aray.append(create_vertex(i, j - 1, curr_txtr, lower_texture_index[0]))
                 _tmp_vertex_aray.append(create_vertex(i + 1, j, curr_txtr, upper_texture_index[1]))
