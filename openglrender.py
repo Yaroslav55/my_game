@@ -1,8 +1,33 @@
 import math
+import sys
+from ctypes import c_void_p
 
-from OpenGL.GL import *
-from OpenGL.GLU import *
-from OpenGL.GLUT import *
+from OpenGL.GL import glFlush, glBegin, glBufferSubData
+from OpenGL.GL import glShaderSource, glGetShaderiv, glGenVertexArrays, glGenBuffers, glBufferData, \
+    glVertexAttribPointer, glGenTextures, glTexImage2D, glEnd, glDrawElements
+from OpenGL.GL.framebufferobjects import glGenerateMipmap
+from OpenGL.GL.shaders import glAttachShader, GL_LINK_STATUS, glGetProgramInfoLog, glGetProgramiv, glDeleteShader
+from OpenGL.GLUT import glutInitContextVersion, glutInit, glutCreateWindow, glutDisplayFunc, glutSpecialFunc, \
+    glutReshapeFunc, glutTimerFunc
+from OpenGL.arrays._arrayconstants import GL_UNSIGNED_BYTE, GL_UNSIGNED_INT
+from OpenGL.raw.GL.ARB.robustness import GL_NO_ERROR
+from OpenGL.raw.GL.ARB.vertex_array_object import glBindVertexArray
+from OpenGL.raw.GL.ARB.vertex_shader import GL_FLOAT
+from OpenGL.raw.GL.VERSION.GL_1_0 import glGetError, GL_TEXTURE_2D, glPixelStorei, GL_RGB, GL_RGBA, GL_UNPACK_ALIGNMENT, \
+    glTexParameterf, GL_TEXTURE_ENV_MODE, GL_TEXTURE_MIN_FILTER, GL_NEAREST, GL_TEXTURE_MAG_FILTER, glTexEnvf, \
+    GL_TEXTURE_ENV, GL_DECAL, glEnable, glViewport, glMatrixMode, glLoadIdentity, GL_PROJECTION, GL_MODELVIEW, \
+    glFrustum, GL_TRIANGLES, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT, glClear, glClearColor, glScalef, GL_DEPTH_TEST, \
+    glPolygonMode, GL_FRONT_AND_BACK, GL_FILL, glVertex3f, glColor3f, GL_LINES, glColor3d, glVertex3d, glTexCoord2f, \
+    glLineWidth, GL_LINE
+from OpenGL.raw.GL.VERSION.GL_1_1 import glBindTexture
+from OpenGL.raw.GL.VERSION.GL_1_5 import glBindBuffer, GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW
+from OpenGL.raw.GL.VERSION.GL_2_0 import GL_VERTEX_SHADER, GL_COMPILE_STATUS, glCompileShader, glGetShaderInfoLog, \
+    glCreateShader, GL_FRAGMENT_SHADER, glCreateProgram, glLinkProgram, glUseProgram, glEnableVertexAttribArray
+from OpenGL.raw.GLU import gluErrorString, gluLookAt
+from OpenGL.raw.GLUT import GLUT_KEY_PAGE_DOWN, GLUT_KEY_END, GLUT_KEY_HOME, GLUT_KEY_PAGE_UP, GLUT_KEY_RIGHT, \
+    GLUT_KEY_LEFT, GLUT_KEY_DOWN, \
+    GLUT_KEY_UP, glutInitDisplayMode, glutInitWindowSize, GLUT_SINGLE, GLUT_RGB, glutInitWindowPosition, glutMainLoop, \
+    glutPostRedisplay
 from PIL import Image
 
 import time
@@ -10,7 +35,9 @@ import numpy as np
 from typing import Union
 from typing import List
 
+from backend.debug_logger import Logger
 from camera import Camera3D
+from model_loader import Model
 from scene import Scene, Vector3f
 
 
@@ -75,16 +102,11 @@ class OpenGLRender(object):
 
     def _load_Meshes_in_VAO(self, meshes):
         float_size = 4  # min size of element in one vertex
-        from scene import Mesh
-        def load_mesh(mesh: Mesh):
-            vertices = mesh.vertex_array
-            indices = np.array((mesh.index_array), dtype=np.int32)
-            # index_buffer = (1, 6, 2, 7, 3, 8, 4, 9, 5, 10, 10, 6, 6, 11, 7, 12, 8, 13, 9, 14, 10, 15)
-            # vertex_arr: list[list[float]] = [
-            #     [3, 5, 0], [4, 5, 0], [5, 5, 0], [6, 5, 0], [7, 5, 0],
-            #     [3, 4, 0], [4, 4, 0], [5, 4, 0], [6, 4, 0], [7, 4, 0],
-            #     [3, 3, 0], [4, 3, 0], [5, 3, 0], [6, 3, 0], [7, 3, 0]
-            # ]
+        # from scene import Mesh
+        def load_mesh(mesh):
+            vertices = mesh.model_data
+            indices = np.array((mesh.vertex_indices), dtype=np.int32)
+
             mesh.VAO = glGenVertexArrays(1)
             mesh.VBO = glGenBuffers(1)
             mesh.EBO = glGenBuffers(1)
@@ -110,7 +132,7 @@ class OpenGLRender(object):
             # load mesh textures
             mesh.material = self.load_textures(mesh.texture_name)
 
-        if isinstance(meshes, Mesh):  # IF var meshes is not list of Mesh
+        if isinstance(meshes, Model):  # IF var meshes is not list of Mesh
             load_mesh(meshes)
             return 1
         for mesh in meshes:
@@ -247,7 +269,6 @@ class OpenGLRender(object):
         # glBindTexture(GL_TEXTURE_2D, texture)
         #       Draw game terrain
         for index, chunk in enumerate(meshes):
-            start_index = 0
             # last_index = int(start_index + (chunk.numb_of_faces * chunk.numb_of_faces) * 2 - 1)
             glBegin(GL_TRIANGLES)
             for i in chunk.index_array:
@@ -287,7 +308,7 @@ class OpenGLRender(object):
             im = Image.open(texture_name)
             convert = im.convert("RGBA")
         except OSError:
-            print("Cannot open img ", texture_name)
+            Logger.warn(f"Cannot open img {texture_name}")
             return -1
         return convert
 
@@ -311,9 +332,6 @@ class OpenGLRender(object):
         # glBindTexture(GL_TEXTURE_2D, texture_ptr)
         return texture_ptr
 
-    def draw_mesh(self):
-        pass
-
     def drawCube(self):
         texture = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, texture)
@@ -327,76 +345,15 @@ class OpenGLRender(object):
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
         glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
-        # glVertexPointer(3, GL_FLOAT, 0, None)
-        # """Draw a cube with texture coordinates"""
-        # texcoord_index = glGetAttribLocation(self.shaderProgram, "in_coord");
-        # glBegin(GL_QUADS);
-        # glTexCoord2f(0.0, 0.0);
-        # glVertex3f(-1.0, -1.0, 1.0);
-        # glTexCoord2f(1.0, 0.0);
-        #
-        # glVertex3f(1.0, -1.0, 1.0);
-        # glTexCoord2f(1.0, 1.0);
-        #
-        # glVertex3f(1.0, 1.0, 1.0);
-        #
-        # glTexCoord2f(0.0, 1.0);
-        # glVertex3f(-1.0, 1.0, 1.0);
-        # glTexCoord2f(1.0, 0.0);
-        # glVertex3f(-1.0, -1.0, -1.0);
-        #
-        # glTexCoord2f(1.0, 1.0);
-        # glVertex3f(-1.0, 1.0, -1.0);
-        #
-        # glTexCoord2f(0.0, 1.0);
-        # glVertex3f(1.0, 1.0, -1.0);
-        #
-        # glTexCoord2f(0.0, 0.0);
-        # glVertex3f(1.0, -1.0, -1.0);
-        #
-        # glTexCoord2f(0.0, 1.0);
-        # glVertex3f(-1.0, 1.0, -1.0);
-        # glTexCoord2f(0.0, 0.0);
-        # glVertex3f(-1.0, 1.0, 1.0);
-        # glTexCoord2f(1.0, 0.0);
-        # glVertex3f(1.0, 1.0, 1.0);
-        # glTexCoord2f(1.0, 1.0);
-        # glVertex3f(1.0, 1.0, -1.0);
-        # glTexCoord2f(1.0, 1.0);
-        # glVertex3f(-1.0, -1.0, -1.0);
-        # glTexCoord2f(0.0, 1.0);
-        # glVertex3f(1.0, -1.0, -1.0);
-        # glTexCoord2f(0.0, 0.0);
-        # glVertex3f(1.0, -1.0, 1.0);
-        # glTexCoord2f(1.0, 0.0);
-        # glVertex3f(-1.0, -1.0, 1.0);
-        # glTexCoord2f(1.0, 0.0);
-        # glVertex3f(1.0, -1.0, -1.0);
-        # glTexCoord2f(1.0, 1.0);
-        # glVertex3f(1.0, 1.0, -1.0);
-        # glTexCoord2f(0.0, 1.0);
-        # glVertex3f(1.0, 1.0, 1.0);
-        # glTexCoord2f(0.0, 0.0);
-        # glVertex3f(1.0, -1.0, 1.0);
-        # glTexCoord2f(0.0, 0.0);
-        # glVertex3f(-1.0, -1.0, -1.0);
-        # glTexCoord2f(1.0, 0.0);
-        # glVertex3f(-1.0, -1.0, 1.0);
-        # glTexCoord2f(1.0, 1.0);
-        # glVertex3f(-1.0, 1.0, 1.0);
-        # glTexCoord2f(0.0, 1.0);
-        # glVertex3f(-1.0, 1.0, -1.0);
-        # glEnd()
 
     def _DrawMeshes_with_VAO(self, meshes):
         def draw(VAO_obj):
             glBindTexture(GL_TEXTURE_2D, VAO_obj.material)
             glBindVertexArray(VAO_obj.VAO)
-            glDrawElements(GL_TRIANGLES, len(VAO_obj.index_array), GL_UNSIGNED_INT, None)
+            glDrawElements(GL_TRIANGLES, len(VAO_obj.vertex_indices), GL_UNSIGNED_INT, None)
             # glDrawArrays(GL_TRIANGLE_STRIP, 0, 6)
 
-        from scene import Mesh
-        if isinstance(meshes, Mesh):  # IF var meshes is not list of Mesh
+        if isinstance(meshes, Model):  # IF var meshes is not list of Mesh
             draw(meshes)
             return 1
         if not len(meshes):
@@ -419,12 +376,14 @@ class OpenGLRender(object):
         else:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         if 1:
-            self._DrawMeshes_with_VAO(self._game_scene.chunks)
+            # self._DrawMeshes_with_VAO(self._game_scene.chunks)
+            self._DrawMeshes_with_VAO(self._game_scene.models)
         else:
             self.set_shaders(self.default_vertexShaderSource, self.default_fragmentShaderSource)
-            # self._game_scene.chunks.append(self._camera_obj.player_mesh)
+            self._game_scene.chunks.append(self._camera_obj.player_mesh)
             self._draw_terrain(self._game_scene.chunks)
-        self.update_vertex_in_VBO(self._camera_obj.player_mesh)
+        # self.update_vertex_in_VBO(self._camera_obj.player_mesh)
+        # self.update_vertex_in_VBO(self._game_scene.models[0])
         # self._DrawMeshes_with_VAO(self._game_scene.models)          # Draw game object
 
         # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
@@ -437,7 +396,7 @@ class OpenGLRender(object):
     def opengl_error_check(self):
         error = glGetError()
         if error != GL_NO_ERROR:
-            print("OPENGL_ERROR: ", gluErrorString(error))
+            Logger.wanr(f"OPENGL_ERROR: {gluErrorString(error)}")
 
     def INfutureForDestrustor(self):
         # Опционально: освобождаем        все        ресурсы, как        только
