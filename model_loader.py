@@ -1,11 +1,24 @@
-from scene import Vector3f
+from dataclasses import dataclass
+
+import numpy as np
+
+from backend.debug_logger import Logger
+from backend.entities.entities import Model
+from scene import Vector3f, Mesh
+
+
 class Loader(object):
 
-    def __init__(self):
-        pass
+    @dataclass
+    class MainSymbols:
+        COMMENT: str = '#'
+        VERTEX: str = 'v'
+        TEXT_COORDS: str = 'vt'
+        VERTEX_NORM: str = 'vn'
+        FRAGMENT: str = 'f'
 
-    def load_model(self, model_name, model_pos:Vector3f = Vector3f(0, 18, 0), scale = 0.5):
-        from scene import Mesh
+
+    def load_model(self, model_name, model_pos: Vector3f = Vector3f(0, 18, 0), scale = 0.5):
 
         #scale = 0.01
         obj_center_vec = model_pos
@@ -14,9 +27,6 @@ class Loader(object):
             with open(model_name, 'r') as file:
                 lines = file.readlines()        # Read all data
                 file.close()
-                # if lines[0][0] != '#':
-                #     print("Error obj format is invalid")
-                #     return -1
                 model_mesh = Mesh()
                 model_mesh.mesh_position = obj_center_vec
                 model_mesh.directionOfMovement.set_variables( obj_center_vec.x, obj_center_vec.y, obj_center_vec.z)
@@ -62,3 +72,86 @@ class Loader(object):
             return -2
         print("Something go wrong ", model_name)
         return -3
+
+
+    def load_mode_nl(self, model_name, model_pos: Vector3f = Vector3f(0, 18, 0), scale = 0.5) -> Model:
+        with open(model_name, 'r') as file:
+            lines = [line.strip() for line in file.readlines() if line != '\n' ]
+
+        start_data = {
+            self.MainSymbols.VERTEX: int,
+            # self.MainSymbols.TEXT_COORDS: int,
+            self.MainSymbols.VERTEX_NORM: int,
+        }
+        for data_type, start in start_data.items():
+            for line_num, line in enumerate(lines):
+                if  self.MainSymbols.COMMENT in line:
+                    continue
+                if data_type in line:
+                    start_data[data_type] = line_num
+                    break
+
+        mesh_data = list()
+        fragments: list[int] = list()
+        info_data: list[str] = list()
+        for index, line in enumerate(lines):
+            split_line = line.split()
+            if self.MainSymbols.COMMENT in split_line[0]:
+                info_data.append(line)
+            elif self.MainSymbols.FRAGMENT in split_line[0]:
+                fragments.extend( [ int(inx[0])-1 for inx in split_line[1:]])
+            elif self.MainSymbols.VERTEX in split_line[0]:
+                related_text_coor: list[str] = [1, 1, 1]
+                related_normal: list[str] = [1, 1]
+                x, y, z = [float(x) for x in split_line[1:]]
+                vector_real_pos = Vector3f(x, y, z)
+                vector_real_pos += model_pos
+                vector_real_pos *= scale
+
+                mesh_data.append( [*vector_real_pos, *related_normal, *related_text_coor]  )
+            else:
+                Logger.warn(f"In loading model {model_name}, line: {split_line}")
+
+        model_mesh = Model(name=model_name, mesh_info= info_data,
+                           data_arr=np.array(mesh_data, dtype='f'), indices=fragments)
+        return model_mesh
+
+
+    def load_model_new(self, model_name: str, model_pos: Vector3f = Vector3f(0, 18, 0), scale = 1) -> Model:
+        """from Figuro at https://www.figuro.io"""
+        with open(model_name, 'r') as file:
+            lines = [line.strip() for line in file.readlines()]
+
+        start_data = {
+            self.MainSymbols.VERTEX: int,
+            self.MainSymbols.TEXT_COORDS: int,
+            self.MainSymbols.VERTEX_NORM: int,
+        }
+        for data_type, start in start_data.items():
+            for line_num, line in enumerate(lines):
+                if data_type in line:
+                    start_data[data_type] = line_num
+                    break
+
+        tmp_ar = list()
+        fragments: list[int] = list()
+        info_data: list[str] = list()
+        for index, line in enumerate(lines):
+            if not line:
+                continue
+
+            split_line = line.split()
+            if self.MainSymbols.COMMENT in split_line[0]:
+                info_data.append(line)
+            elif self.MainSymbols.FRAGMENT in split_line[0]:
+                fragments.extend( [ int(inx[0]) for inx in split_line[1:]])
+            elif self.MainSymbols.VERTEX_NORM in split_line[0]:
+                related_text_coor: list[str] = lines[start_data[self.MainSymbols.TEXT_COORDS]].split()[1:]
+                related_normal: list[str] = lines[start_data[self.MainSymbols.VERTEX_NORM]].split()[1:]
+                tmp_ar.extend( [*split_line[1:], *related_normal, *related_text_coor,]  )
+
+                start_data =  { k: d+1 for k, d in start_data.items() }
+            else:
+                print(f"{split_line}")
+
+        return Model(info_data, tmp_ar, fragments)
