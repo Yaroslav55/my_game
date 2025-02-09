@@ -1,12 +1,12 @@
-import math
 import sys
 from ctypes import c_void_p
 
-from OpenGL.GL import glFlush, glBegin, glBufferSubData
+from OpenGL.GL import glFlush
 from OpenGL.GL import glShaderSource, glGetShaderiv, glGenVertexArrays, glGenBuffers, glBufferData, \
-    glVertexAttribPointer, glGenTextures, glTexImage2D, glEnd, glDrawElements
+    glVertexAttribPointer, glGenTextures, glTexImage2D, glDrawElements
 from OpenGL.GL.framebufferobjects import glGenerateMipmap
-from OpenGL.GL.shaders import glAttachShader, GL_LINK_STATUS, glGetProgramInfoLog, glGetProgramiv, glDeleteShader
+from OpenGL.GL.shaders import glAttachShader, GL_LINK_STATUS, glGetProgramInfoLog, glGetProgramiv, glDeleteShader, \
+    GL_FALSE
 from OpenGL.GLUT import glutInitContextVersion, glutInit, glutCreateWindow, glutDisplayFunc, glutSpecialFunc, \
     glutReshapeFunc, glutTimerFunc
 from OpenGL.arrays._arrayconstants import GL_UNSIGNED_BYTE, GL_UNSIGNED_INT
@@ -17,7 +17,7 @@ from OpenGL.raw.GL.VERSION.GL_1_0 import glGetError, GL_TEXTURE_2D, glPixelStore
     glTexParameterf, GL_TEXTURE_ENV_MODE, GL_TEXTURE_MIN_FILTER, GL_NEAREST, GL_TEXTURE_MAG_FILTER, glTexEnvf, \
     GL_TEXTURE_ENV, GL_DECAL, glEnable, glViewport, glMatrixMode, glLoadIdentity, GL_PROJECTION, GL_MODELVIEW, \
     glFrustum, GL_TRIANGLES, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT, glClear, glClearColor, glScalef, GL_DEPTH_TEST, \
-    glPolygonMode, GL_FRONT_AND_BACK, GL_FILL, glVertex3f, glColor3f, GL_LINES, glColor3d, glVertex3d, glTexCoord2f, \
+    glPolygonMode, GL_FRONT_AND_BACK, GL_FILL, \
     glLineWidth, GL_LINE
 from OpenGL.raw.GL.VERSION.GL_1_1 import glBindTexture
 from OpenGL.raw.GL.VERSION.GL_1_5 import glBindBuffer, GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW
@@ -30,12 +30,11 @@ from OpenGL.raw.GLUT import GLUT_KEY_PAGE_DOWN, GLUT_KEY_END, GLUT_KEY_HOME, GLU
     glutPostRedisplay
 from PIL import Image
 
-import time
-import numpy as np
 from typing import Union
 from typing import List
 
 from backend.debug_logger import Logger
+from backend.entities.entities import Mesh
 from camera import Camera3D
 from model_loader import Model
 from scene import Scene, Vector3f
@@ -100,80 +99,55 @@ class OpenGLRender(object):
     def run(self):
         self._opengl_init()
 
-    def _load_Meshes_in_VAO(self, meshes):
+    def _load_Meshes_in_VAO(self, meshes : list[Mesh] | Mesh):
         float_size = 4  # min size of element in one vertex
-        # from scene import Mesh
-        def load_mesh(mesh):
+        vertex_size = 8  # numb value for one vertex
+        def load_mesh(mesh: Mesh):
             vertices = mesh.model_data
-            indices = np.array((mesh.vertex_indices), dtype=np.int32)
+            indices = mesh.vertex_indices
 
-            mesh.VAO = glGenVertexArrays(1)
-            mesh.VBO = glGenBuffers(1)
-            mesh.EBO = glGenBuffers(1)
+
             # bind the  Vertex Array Object first, then bind and set vertex  buffer(s), and then configure        vertex        attributes(s).
+            mesh.VAO = glGenVertexArrays(1)
             glBindVertexArray(mesh.VAO)
+
             # Set vertices in VBO
+            mesh.VBO = glGenBuffers(1)
             glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO)
             glBufferData(GL_ARRAY_BUFFER, vertices.size * float_size, vertices, GL_STATIC_DRAW)
-            # Set vertex index
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.EBO)
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, len(indices) * 4, indices, GL_STATIC_DRAW)
 
-            # mPosition = glGetAttribLocation(self.shaderProgram, "aPos") # Or 0
+            # Set vertex index
+            mesh.EBO = glGenBuffers(1)
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.EBO)
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, len(indices) * float_size, indices, GL_STATIC_DRAW)
+
             # position  attribute
-            glVertexAttribPointer(0, 3, GL_FLOAT, False, 8 * float_size, None)
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, vertex_size * vertices.itemsize, None)
             glEnableVertexAttribArray(0)
             # color     attribute
-            glVertexAttribPointer(1, 3, GL_FLOAT, False, 8 * float_size, c_void_p(3 * float_size))
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, vertex_size * vertices.itemsize, c_void_p(3 * float_size))
             glEnableVertexAttribArray(1)
             # textures coord
-            glVertexAttribPointer(2, 2, GL_FLOAT, False, 8 * float_size, c_void_p(6 * float_size))
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, vertex_size * vertices.itemsize, c_void_p(6 * float_size))
             glEnableVertexAttribArray(2)
+
+            # # Развязка VBO и EBO
+            # glBindBuffer(GL_ARRAY_BUFFER, 0)
+            # glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+            #
+            # # Развязка VAO
+            # glBindVertexArray(0)
+            #
             # load mesh textures
             mesh.material = self.load_textures(mesh.texture_name)
 
-        if isinstance(meshes, Model):  # IF var meshes is not list of Mesh
+        if isinstance(meshes, Mesh):
             load_mesh(meshes)
-            return 1
-        for mesh in meshes:
-            load_mesh(mesh)
+        else:
+            for mesh in meshes:
+                load_mesh(mesh)
+
         return 0
-
-    def update_vertex_in_VBO(self, mesh):
-        if not (mesh.mesh_position == mesh.directionOfMovement):
-            self.update_mesh_pos(self._camera_obj.player_mesh,
-                                 self._camera_obj.player_mesh.directionOfMovement)
-            glBindBuffer(GL_ARRAY_BUFFER, self._camera_obj.player_mesh.VBO)
-            glBufferSubData(GL_ARRAY_BUFFER, 0, self._camera_obj.player_mesh.vertex_array.size * 4,
-                            self._camera_obj.player_mesh.vertex_array)
-
-    def update_mesh_pos(self, mesh, new_pos: Vector3f):
-        vector_sum = Vector3f(new_pos.x - mesh.mesh_position.x,
-                              new_pos.y - mesh.mesh_position.y,
-                              new_pos.z - mesh.mesh_position.z)
-
-        vec_len = math.sqrt(math.pow(vector_sum.x, 2) +
-                            math.pow(vector_sum.y, 2) +
-                            math.pow(vector_sum.z, 2))
-
-        if vec_len <= 1:
-            print("[Info]", mesh.info["model_name"], "movement was completed")
-            mesh.directionOfMovement.set_variables(mesh.mesh_position.x,
-                                                   mesh.mesh_position.y,
-                                                   mesh.mesh_position.z)
-            return -1
-        step = 1  # distance by one step
-        step_x = vector_sum.x / (vec_len / step)
-        step_y = vector_sum.y / (vec_len / step)
-        step_z = vector_sum.z / (vec_len / step)
-        #print(vec_len)
-        for vertex in mesh.vertex_array:
-            vertex[0] += step_x  # X
-            vertex[1] += step_y  # Y
-            vertex[2] += step_z  # Z
-        mesh.mesh_position.x += step_x
-        mesh.mesh_position.y += step_y
-        mesh.mesh_position.z += step_z
 
     def set_shaders(self, vertexShader_source, fragmentShaderSource):
         def compileShader(type, shader_source):
@@ -186,7 +160,7 @@ class OpenGLRender(object):
         success = glGetShaderiv(vertexShader, GL_COMPILE_STATUS)
         if not success:
             info_mesg = glGetShaderInfoLog(vertexShader)
-            print("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n", info_mesg)
+            Logger.err(f"ERROR::SHADER::VERTEX::COMPILATION_FAILED {info_mesg}",)
             return -1
         # fragment        shader
         fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource)
@@ -194,7 +168,7 @@ class OpenGLRender(object):
         success = glGetShaderiv(fragmentShader, GL_COMPILE_STATUS)
         if not success:
             info_mesg = glGetShaderInfoLog(fragmentShader)
-            print("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n", info_mesg)
+            Logger.err(f"ERROR::SHADER::FRAGMENT::COMPILATION_FAILED {info_mesg}")
             return -1
         # link        shaders
         self.shaderProgram = glCreateProgram()
@@ -205,12 +179,17 @@ class OpenGLRender(object):
         success = glGetProgramiv(self.shaderProgram, GL_LINK_STATUS)
         if not success:
             info_mesg = glGetProgramInfoLog(self.shaderProgram)
-            print("ERROR::SHADER::PROGRAM::LINKING_FAILED\n", info_mesg)
+            Logger.err(f"ERROR::SHADER::PROGRAM::LINKING_FAILED {info_mesg}")
             return -1
         glDeleteShader(vertexShader)
         glDeleteShader(fragmentShader)
         glUseProgram(self.shaderProgram)
         return 0
+
+    def _load_meshes_in_v_memory(self):
+        self.set_shaders(self.vertexShaderSource, self.fragmentShaderSource)
+        self._load_Meshes_in_VAO(self._game_scene.models)
+        self._load_Meshes_in_VAO(self._camera_obj.player_mesh)
 
     def _opengl_init(self):
         glutInitContextVersion(3, 1)
@@ -223,11 +202,7 @@ class OpenGLRender(object):
         glutInitWindowPosition(100, 100)
         glutCreateWindow(b"Transformed Cube")
         # Old init func
-        self.set_shaders(self.vertexShaderSource, self.fragmentShaderSource)
-        self._load_Meshes_in_VAO(self._game_scene.chunks)
-        self._load_Meshes_in_VAO(self._game_scene.models)
-
-        self._load_Meshes_in_VAO(self._camera_obj.player_mesh)
+        self._load_meshes_in_v_memory()
         # print(float(glGetString(GL_VERSION)[:3]))
 
         # glShadeModel(GL_FLAT)
@@ -239,54 +214,13 @@ class OpenGLRender(object):
         glutMainLoop()
 
     def update_frame(self, value):
-
+        """
+            The main method for rerender screen
+        """
         self.opengl_error_check()
         self._update_func()
         glutPostRedisplay()
         glutTimerFunc(self._GAME_TIMER, self.update_frame, 0)
-
-    def make_line(self, start_pos: Vector3f, end_pos: Vector3f, color: Vector3f):
-        glColor3f(color.x, color.y, color.z)  # Grid color
-        glBegin(GL_LINES)
-        glVertex3f(start_pos.x, start_pos.y, start_pos.z)
-        glVertex3f(end_pos.x, end_pos.y, end_pos.z)
-        glEnd()
-
-    def _draw_lines(self):
-        #       Draw all lines on the scene
-        glBegin(GL_LINES)
-        glColor3d(1, 1, 0)
-        for i in range(300)[::2]:
-            _pos_start = self._game_scene.lines_aray[i]
-            _pos_end = self._game_scene.lines_aray[i + 1]
-            glVertex3d(_pos_start.x, _pos_start.y, _pos_start.z)
-            glVertex3d(_pos_end.x, _pos_end.y, _pos_end.z)
-        glEnd()
-
-    def _draw_terrain(self, meshes, line_mode: bool = 0):
-        texture = None
-        self.load_textures(texture, "test_number.jpg")
-        # glBindTexture(GL_TEXTURE_2D, texture)
-        #       Draw game terrain
-        for index, chunk in enumerate(meshes):
-            # last_index = int(start_index + (chunk.numb_of_faces * chunk.numb_of_faces) * 2 - 1)
-            glBegin(GL_TRIANGLES)
-            for i in chunk.index_array:
-                try:
-                    pos = Vector3f(chunk.vertex_array[i][0], chunk.vertex_array[i][1],
-                                   chunk.vertex_array[i][2])
-                    color = Vector3f(chunk.vertex_array[i][3], chunk.vertex_array[i][4],
-                                     chunk.vertex_array[i][5])
-                    text_coord = Vector3f(chunk.vertex_array[i][6], chunk.vertex_array[i][7],
-                                          0)
-                    glColor3f(color.x, color.y, color.z)
-                    glTexCoord2f(text_coord.x, text_coord.y)
-                    glVertex3d(pos.x, pos.y, pos.z)
-
-                except IndexError:
-                    print("Error: Triangle index dont have a vertex pair: index ", i - 1)
-            glEnd()
-        #       -------------
 
     def reshape(self, w, h):
         glViewport(0, 0, w, h)
@@ -297,11 +231,8 @@ class OpenGLRender(object):
 
     def _make_camera(self, pos: Union[Vector3f, List[float]], look: Union[Vector3f, List[float]]):
 
-        if self.GAME_MODE == "3D":
-            gluLookAt(pos[0], pos[1], pos[2], look[0], look[1], look[2], 0.0, 1.0, 0.0)
-        elif self.GAME_MODE == "2D":
-            pass
-        self._DrawMeshes_with_VAO(self._camera_obj.player_mesh)
+        gluLookAt(pos[0], pos[1], pos[2], look[0], look[1], look[2], 0.0, 1.0, 0.0)
+        self._draw_meshes_with_vao(self._camera_obj.player_mesh)
 
     def _load_texture(self, texture_name) -> Image:
         try:
@@ -312,10 +243,12 @@ class OpenGLRender(object):
             return -1
         return convert
 
-    def load_textures(self, name):
-        texture_img = self._load_texture(name)
+    def load_textures(self, tex_name: str):
+        texture_img = self._load_texture(tex_name)
         if not texture_img:
+            Logger.warn("texture_img is absent!")
             return -1
+
         texture_ptr = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, texture_ptr)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
@@ -328,8 +261,6 @@ class OpenGLRender(object):
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
         glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
-
-        # glBindTexture(GL_TEXTURE_2D, texture_ptr)
         return texture_ptr
 
     def drawCube(self):
@@ -346,28 +277,28 @@ class OpenGLRender(object):
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
         glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
 
-    def _DrawMeshes_with_VAO(self, meshes):
+    def _draw_meshes_with_vao(self, meshes: list[Mesh]):
         def draw(VAO_obj):
+            # glActiveTexture(GL_TEXTURE0)
             glBindTexture(GL_TEXTURE_2D, VAO_obj.material)
             glBindVertexArray(VAO_obj.VAO)
             glDrawElements(GL_TRIANGLES, len(VAO_obj.vertex_indices), GL_UNSIGNED_INT, None)
+            glBindVertexArray(0)
             # glDrawArrays(GL_TRIANGLE_STRIP, 0, 6)
 
-        if isinstance(meshes, Model):  # IF var meshes is not list of Mesh
+        if isinstance(meshes, Model):
             draw(meshes)
-            return 1
-        if not len(meshes):
-            return -1
-            # print("Error Chunk array is empty! ")
-        for mesh in meshes:
-            draw(mesh)
+        else:
+            for mesh in meshes:
+                draw(mesh)
 
     def display(self):
-        delta_time = time.time()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glClearColor(0.2, 0.3, 0.3, 1.0)
         glLoadIdentity()
+        # glColor3f(1.0, 1.0, 1.0)
         self._make_camera(self._camera_obj.get_postion(), self._camera_obj.get_point_of_view())
+        self._draw_meshes_with_vao(self._game_scene.models)
         glScalef(1.0, 2.0, 1.0)
         glEnable(GL_DEPTH_TEST)
         if 0:
@@ -375,23 +306,10 @@ class OpenGLRender(object):
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
         else:
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-        if 1:
-            # self._DrawMeshes_with_VAO(self._game_scene.chunks)
-            self._DrawMeshes_with_VAO(self._game_scene.models)
-        else:
-            self.set_shaders(self.default_vertexShaderSource, self.default_fragmentShaderSource)
-            self._game_scene.chunks.append(self._camera_obj.player_mesh)
-            self._draw_terrain(self._game_scene.chunks)
-        # self.update_vertex_in_VBO(self._camera_obj.player_mesh)
-        # self.update_vertex_in_VBO(self._game_scene.models[0])
-        # self._DrawMeshes_with_VAO(self._game_scene.models)          # Draw game object
 
         # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-        # glColor3f(1.0, 0.0, 1.0)
         # glutSolidCube(0.05)
         glFlush()
-        delta_time = time.time() - delta_time  # The more the worse
-        # print("Delta time: ", delta_time)
 
     def opengl_error_check(self):
         error = glGetError()
