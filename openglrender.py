@@ -35,12 +35,13 @@ from typing import List
 
 from backend.debug_logger import Logger
 from backend.entities.entities import Mesh
+from backend.graphic_engine.engine_abstract import Graphic
 from camera import Camera3D
 from model_loader import Model
 from scene import Scene, Vector3f
 
 
-class OpenGLRender(object):
+class OpenGLRender(Graphic):
     _GAME_TIMER = 15  # Related to game FPS
     GAME_MODE = "3D"
 

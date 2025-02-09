@@ -1,13 +1,13 @@
 # Yaroslav 2023
 from __future__ import annotations
 
-from scene import Scene
-from camera import *
-from openglrender import OpenGLRender
-from model_loader import Loader
+from backend.graphic_engine.graphic_manager import GraphicManager
+from camera import Camera2D, Camera3D
+from const_variables_store import GAME_MODE
+from scene import Scene, Vector3f
 
-GAME_MODE = "2D"
-RENDER_API = "Opengl"
+
+from model_loader import Loader
 
 
 def update():
@@ -19,26 +19,22 @@ def game_init():
     pass
 
 
-def dec_init(func):
-    def wrapper():
-        if GAME_MODE == "2D":
-            game_camera = Camera2D(33.0, 120.0, 77.0, 0, -190)  # Class of main game camera
-        else:
-            game_camera = Camera3D(10.0, 10.0, 14.0, -90, -90)  # Class of main game camera
-        if RENDER_API == "Opengl":
-            render_cls = OpenGLRender
-        func(render_cls, game_camera)
-    return wrapper
 
-@dec_init
-def run_game(renger_cls: OpenGLRender, came_obj: Camera2D | Camera3D):
+def run_game():
+    if GAME_MODE == "2D":
+        game_camera = Camera2D(33.0, 120.0, 77.0, 0, -190)  # Class of main game camera
+    else:
+        game_camera = Camera3D(10.0, 10.0, 14.0, -90, -90)  # Class of main game camera
+
     model = Loader()
     game_scene = Scene()
-    game_scene.draw_terrain(3)
-    came_obj.set_player_mesh(model.load_model("models/tinker.obj", scale=10))
+    # new = model.load_model("models/tinker.obj", model_pos =Vector3f(0, 0, 0), scale=1)
+    cube = model.load_model("models/textured_cube.obj", model_pos =Vector3f(0, 4, -5), scale=10)
+    # game_scene.add_entity( cube )
+    game_camera.set_player_mesh(cube)
     game_init()
 
-    render = renger_cls(came_obj, game_scene, update)
+    render = GraphicManager(game_camera, game_scene, update)
     render.run()  # Start game loop
 
 if __name__ == "__main__":
