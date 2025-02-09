@@ -1,4 +1,3 @@
-import time
 from dataclasses import dataclass
 
 import numpy as np
@@ -85,5 +84,4 @@ class Loader:
                 loader_obj = self.supported_model_formats[format]
                 return  loader_obj.load_model(model_name, model_pos, scale)
         Logger.warn(f"Cant load entity {model_name}")
-        time.sleep(1)
         return -1
