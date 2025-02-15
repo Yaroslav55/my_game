@@ -187,9 +187,15 @@ class OpenGLRender(Graphic):
         glUseProgram(self.shaderProgram)
         return 0
 
+    def update_meshes_in_memory(self):
+        for model in self._game_scene.models:
+            if model.need_update_mesh:
+                self._load_Meshes_in_VAO(self._game_scene.models)
+                model.need_update_mesh = False
+
     def _load_meshes_in_v_memory(self):
         self.set_shaders(self.vertexShaderSource, self.fragmentShaderSource)
-        self._load_Meshes_in_VAO(self._game_scene.models)
+        self.update_meshes_in_memory()
         self._load_Meshes_in_VAO(self._camera_obj.player_mesh)
 
     def _opengl_init(self):
@@ -298,9 +304,9 @@ class OpenGLRender(Graphic):
         glClearColor(0.2, 0.3, 0.3, 1.0)
         glLoadIdentity()
         # glColor3f(1.0, 1.0, 1.0)
+        glScalef(1.0, 2.0, 1.0)
         self._make_camera(self._camera_obj.get_postion(), self._camera_obj.get_point_of_view())
         self._draw_meshes_with_vao(self._game_scene.models)
-        glScalef(1.0, 2.0, 1.0)
         glEnable(GL_DEPTH_TEST)
         if 0:
             glLineWidth(1)
