@@ -192,11 +192,12 @@ class OpenGLRender(Graphic):
             if model.need_update_mesh:
                 self._load_Meshes_in_VAO(self._game_scene.models)
                 model.need_update_mesh = False
+                # model.clear_model_data()
 
     def _load_meshes_in_v_memory(self):
         self.set_shaders(self.vertexShaderSource, self.fragmentShaderSource)
-        self.update_meshes_in_memory()
         self._load_Meshes_in_VAO(self._camera_obj.player_mesh)
+        self.update_meshes_in_memory()
 
     def _opengl_init(self):
         glutInitContextVersion(3, 1)
